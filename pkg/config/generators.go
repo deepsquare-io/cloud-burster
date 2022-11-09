@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -10,6 +11,17 @@ import (
 	"github.com/squarefactory/cloud-burster/utils/cidr"
 	"go.uber.org/zap"
 )
+
+var matchCommaOutsideOfBrackets = regexp.MustCompile(`(?:\[+[^\[\]]*\]+|[^,])+`)
+
+// SplitCommaOutsideOfBrackets generates strings
+func SplitCommaOutsideOfBrackets(pattern string) []string {
+	res := matchCommaOutsideOfBrackets.FindAllString(pattern, -1)
+	if res == nil {
+		return []string{""}
+	}
+	return res
+}
 
 // ExpandBrackets generates strings based on brackets ranges or digits.
 //

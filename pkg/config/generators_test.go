@@ -11,6 +11,39 @@ type GeneratorsTestSuite struct {
 	suite.Suite
 }
 
+func (suite *GeneratorsTestSuite) TestSplitCommaOutsideOfBrackets() {
+	tests := []struct {
+		input    string
+		expected []string
+		title    string
+	}{
+		{
+			input: "cn[1,2]cn[2,5-7],cn3,cn[4,5]",
+			expected: []string{
+				"cn[1,2]cn[2,5-7]",
+				"cn3",
+				"cn[4,5]",
+			},
+			title: "Positive test",
+		},
+		{
+			input:    "",
+			expected: []string{""},
+			title:    "Empty test",
+		},
+	}
+
+	for _, tt := range tests {
+		suite.Run(tt.title, func() {
+			// Act
+			actual := config.SplitCommaOutsideOfBrackets(tt.input)
+
+			// Assert
+			suite.Equal(tt.expected, actual)
+		})
+	}
+}
+
 func (suite *GeneratorsTestSuite) TestExpandBrackets() {
 	tests := []struct {
 		input    string
