@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	github.com/gophercloud/gophercloud v1.0.0
-	github.com/stretchr/testify v1.8.0
-	github.com/urfave/cli/v2 v2.19.2
+	github.com/stretchr/testify v1.8.1
+	github.com/urfave/cli/v2 v2.23.5
 	go.uber.org/zap v1.23.0
 )
 
