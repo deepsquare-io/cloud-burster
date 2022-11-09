@@ -3,21 +3,22 @@ package main
 import (
 	"os"
 
+	"github.com/squarefactory/cloud-burster/cmd/create"
+	"github.com/squarefactory/cloud-burster/cmd/delete"
 	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 )
 
-var flags = []cli.Flag{
-}
+var flags = []cli.Flag{}
 
 var app = &cli.App{
 	Name:  "cloud-burster",
 	Usage: "Burst into the cloud.",
 	Flags: flags,
-	Action: func(ctx *cli.Context) error {
-
-		return nil
+	Commands: []*cli.Command{
+		create.Command,
+		delete.Command,
 	},
 }
 
