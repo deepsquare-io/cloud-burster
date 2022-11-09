@@ -182,7 +182,7 @@ func (suite *GeneratorsTestSuite) TestGenerateHostsFromGroupHost() {
 		{
 			input: config.GroupHost{
 				NamePattern:  "cn[1-2000]",
-				IPcidr:       "172.20.0.0/20",
+				IPcidr:       "172.20.0.0/24",
 				HostTemplate: hostTemplate,
 			},
 			isError:  true,

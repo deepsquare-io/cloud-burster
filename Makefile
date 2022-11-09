@@ -2,9 +2,9 @@
 all: build
 
 .PHONY: build
-build: supervisor
+build: cloud-burster
 
-supervisor:
+cloud-burster:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o $@ ./cmd
 
 .PHONY: unit
@@ -19,6 +19,10 @@ coverage:
 .PHONY: integration
 integration:
 	go test -v -race -covermode=atomic -tags=integration -timeout=30s ./...
+
+.PHONY: lint
+lint:
+	golangci-lint run
 
 .PHONY: mocks
 mocks:

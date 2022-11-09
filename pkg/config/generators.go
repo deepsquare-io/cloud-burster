@@ -33,7 +33,6 @@ func ExpandBrackets(pattern string) []string {
 	}
 
 	beginIdx := -1
-	endIdx := -1
 	for idx, rune := range pattern {
 		// Search for '['
 		if rune == '[' {
@@ -42,14 +41,11 @@ func ExpandBrackets(pattern string) []string {
 
 		// Search for ']'
 		if rune == ']' && beginIdx != -1 && beginIdx <= idx {
-			endIdx = idx
-
-			digits := ParseRangeList(pattern[beginIdx+1 : endIdx])
+			digits := ParseRangeList(pattern[beginIdx+1 : idx])
 
 			// Add the generated name
 			for _, digit := range digits {
-				newPattern := fmt.Sprintf("%s%d%s", pattern[:beginIdx], digit, pattern[endIdx+1:])
-				out = append(out, newPattern)
+				out = append(out, fmt.Sprintf("%s%d%s", pattern[:beginIdx], digit, pattern[idx+1:]))
 			}
 
 			break
