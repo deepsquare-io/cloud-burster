@@ -5,7 +5,7 @@ all: build
 build: cloud-burster
 
 cloud-burster:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o $@ ./cmd
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o $@ ./cmd
 
 .PHONY: unit
 unit:
