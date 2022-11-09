@@ -229,7 +229,11 @@ func (s *DataSource) DeletePort(id string) error {
 	return ports.Delete(s.networkClient, id).ExtractErr()
 }
 
-func (s *DataSource) Create(host config.Host, network config.Network, userData []byte) (*servers.Server, error) {
+func (s *DataSource) Create(
+	host config.Host,
+	network config.Network,
+	cloudConfigOpts config.CloudConfigTemplateOpts,
+) (*servers.Server, error) {
 	logger.I.Debug("Create called", zap.Any("host", host))
 	image, err := s.FindImageID(host.ImageName)
 	if err != nil {
@@ -252,12 +256,16 @@ func (s *DataSource) Create(host config.Host, network config.Network, userData [
 		return nil, err
 	}
 	configDrive := true
+	userData, err := GenerateCloudConfig(cloudConfigOpts)
+	if err != nil {
+		return nil, err
+	}
 	server, err := bootfromvolume.Create(s.computeClient, bootfromvolume.CreateOptsExt{
 		CreateOptsBuilder: servers.CreateOpts{
 			Name:      host.Name,
 			ImageRef:  image,
 			FlavorRef: flavor,
-			UserData:  userData,
+			UserData:  []byte(userData),
 			Networks: []servers.Network{
 				{
 					Port: portID,
@@ -287,7 +295,7 @@ func (s *DataSource) Create(host config.Host, network config.Network, userData [
 }
 
 func (s *DataSource) FindServerID(name string) (string, error) {
-	logger.I.Warn("FindServerID called", zap.String("name", name))
+	logger.I.Debug("FindServerID called", zap.String("name", name))
 	pager := servers.List(s.computeClient, servers.ListOpts{
 		Name: name,
 	})

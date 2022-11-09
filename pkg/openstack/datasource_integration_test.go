@@ -24,20 +24,21 @@ var (
 
 	hostConfig = config.Host{
 		Name:       "delete-me-integration-test",
-		OS:         "rhel9",
 		DiskSize:   5,
 		FlavorName: flavor,
 		ImageName:  image,
 		IP:         "172.28.1.254",
-		Netmask:    "20",
-		DNS:        "8.8.8.8",
-		Search:     "",
 	}
 	networkConfig = config.Network{
 		Name:       network,
 		SubnetCIDR: subnetCIDR,
 	}
-	userData = ""
+	cloudConfig = config.CloudConfigTemplateOpts{
+		AuthorizedKeys: []string{
+			"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
+		},
+		DNS: "1.1.1.1",
+	}
 )
 
 type DataSourceTestSuite struct {
@@ -125,7 +126,7 @@ func (suite *DataSourceTestSuite) TestCreate() {
 	res, err := suite.impl.Create(
 		hostConfig,
 		networkConfig,
-		[]byte(userData),
+		cloudConfig,
 	)
 
 	// Assert
