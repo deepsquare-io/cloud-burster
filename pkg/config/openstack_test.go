@@ -26,7 +26,7 @@ func (suite *OpenstackTestSuite) TestValidate() {
 		{
 			input: `enabled: true
 identityEndpoint: 'https://auth.cloud.ovh.net/'
-user: user-79q6gZ9jD2Mw
+username: user-79q6gZ9jD2Mw
 password: ''
 region: GRA9
 tenantID: 9adc45ea0a4e4d84a5acff1d829613e0
@@ -36,7 +36,7 @@ domainID: default`,
 			expected: &config.Openstack{
 				Enabled:          true,
 				IdentityEndpoint: "https://auth.cloud.ovh.net/",
-				User:             "user-79q6gZ9jD2Mw",
+				UserName:         "user-79q6gZ9jD2Mw",
 				Password:         "",
 				TenantID:         "9adc45ea0a4e4d84a5acff1d829613e0",
 				TenantName:       "6246671714361170",
@@ -48,7 +48,7 @@ domainID: default`,
 		{
 			input: `enabled: false
 identityEndpoint: ''
-user: ''
+username: ''
 password: ''
 region: ''
 tenantID: ''
@@ -58,7 +58,7 @@ domainID: ''`,
 			expected: &config.Openstack{
 				Enabled:          false,
 				IdentityEndpoint: "",
-				User:             "",
+				UserName:         "",
 				Password:         "",
 				TenantID:         "",
 				TenantName:       "",
@@ -70,7 +70,7 @@ domainID: ''`,
 		{
 			input: `enabled: true
 identityEndpoint: 'aaa'
-user: user-79q6gZ9jD2Mw
+username: user-79q6gZ9jD2Mw
 password: ''
 region: GRA9
 tenantID: 9adc45ea0a4e4d84a5acff1d829613e0
@@ -80,7 +80,7 @@ domainID: default`,
 			expected: &config.Openstack{
 				Enabled:          true,
 				IdentityEndpoint: "aaa",
-				User:             "user-79q6gZ9jD2Mw",
+				UserName:         "user-79q6gZ9jD2Mw",
 				Password:         "",
 				TenantID:         "9adc45ea0a4e4d84a5acff1d829613e0",
 				TenantName:       "6246671714361170",

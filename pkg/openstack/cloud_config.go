@@ -64,7 +64,7 @@ runcmd:
 
 `
 
-func GenerateCloudConfig(options config.CloudConfigTemplateOpts) (string, error) {
+func GenerateCloudConfig(options *config.CloudConfigTemplateOpts) (string, error) {
 	t, err := template.New("cloud-config").Parse(cloudConfigTemplate)
 	if err != nil {
 		return "", err

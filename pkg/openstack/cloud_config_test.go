@@ -80,7 +80,7 @@ runcmd:
 
 `
 
-	res, err := openstack.GenerateCloudConfig(opts)
+	res, err := openstack.GenerateCloudConfig(&opts)
 	suite.NoError(err)
 	suite.Equal(expected, res)
 	logger.I.Debug(res)

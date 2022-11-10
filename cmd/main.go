@@ -10,7 +10,31 @@ import (
 	"go.uber.org/zap"
 )
 
-var flags = []cli.Flag{}
+var flags = []cli.Flag{
+	&cli.StringFlag{
+		Name:  "config.path",
+		Value: "/etc/cloud-burster/config.yaml",
+		EnvVars: []string{
+			"CONFIG_PATH",
+		},
+		Aliases: []string{"c"},
+		Action: func(ctx *cli.Context, s string) error {
+			info, err := os.Stat("s")
+			if err != nil {
+				return err
+			}
+			perms := info.Mode().Perm()
+			if perms != 0o600 {
+				logger.I.Fatal(
+					"incorrect permisisons for config file, must be 0600",
+					zap.String("config.path", s),
+					zap.Stringer("permissions", perms),
+				)
+			}
+			return nil
+		},
+	},
+}
 
 var app = &cli.App{
 	Name:  "cloud-burster",
@@ -20,6 +44,7 @@ var app = &cli.App{
 		create.Command,
 		delete.Command,
 	},
+	Suggest: true,
 }
 
 func main() {

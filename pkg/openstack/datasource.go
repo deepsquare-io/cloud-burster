@@ -21,11 +21,31 @@ import (
 )
 
 type DataSource struct {
+	provider      *gophercloud.ProviderClient
 	computeClient *gophercloud.ServiceClient
 	networkClient *gophercloud.ServiceClient
 }
 
-func New(provider *gophercloud.ProviderClient, region string) *DataSource {
+func New(
+	endpoint string,
+	username string,
+	password string,
+	tenantID string,
+	tenantName string,
+	region string,
+	domainID string,
+) *DataSource {
+	provider, err := openstack.AuthenticatedClient(gophercloud.AuthOptions{
+		IdentityEndpoint: endpoint,
+		Username:         username,
+		Password:         password,
+		TenantID:         tenantID,
+		TenantName:       tenantName,
+		DomainID:         domainID,
+	})
+	if err != nil {
+		logger.I.Panic("failed to authenticate client", zap.Error(err))
+	}
 	computeClient, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
 		Region: region,
 	})
@@ -39,6 +59,7 @@ func New(provider *gophercloud.ProviderClient, region string) *DataSource {
 		logger.I.Panic("couldn't instanciate networkClient", zap.Error(err))
 	}
 	return &DataSource{
+		provider:      provider,
 		computeClient: computeClient,
 		networkClient: networkClient,
 	}
@@ -230,35 +251,35 @@ func (s *DataSource) DeletePort(id string) error {
 }
 
 func (s *DataSource) Create(
-	host config.Host,
-	network config.Network,
-	cloudConfigOpts config.CloudConfigTemplateOpts,
-) (*servers.Server, error) {
+	host *config.Host,
+	network *config.Network,
+	cloudConfigOpts *config.CloudConfigTemplateOpts,
+) error {
 	logger.I.Debug("Create called", zap.Any("host", host))
 	image, err := s.FindImageID(host.ImageName)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	flavor, err := s.FindFlavorID(host.FlavorName)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	networkID, err := s.FindNetworkID(network.Name)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	subnetID, err := s.FindSubnetIDByNetwork(network.SubnetCIDR, networkID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	portID, err := s.CreatePort(host.IP, networkID, subnetID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	configDrive := true
 	userData, err := GenerateCloudConfig(cloudConfigOpts)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	server, err := bootfromvolume.Create(s.computeClient, bootfromvolume.CreateOptsExt{
 		CreateOptsBuilder: servers.CreateOpts{
@@ -288,10 +309,10 @@ func (s *DataSource) Create(
 		if err := s.DeletePort(portID); err != nil {
 			logger.I.Error("failed to delete port", zap.Error(err))
 		}
-		return nil, err
+		return err
 	}
 	logger.I.Info("spawned a server", zap.Any("server", server))
-	return server, nil
+	return nil
 }
 
 func (s *DataSource) FindServerID(name string) (string, error) {

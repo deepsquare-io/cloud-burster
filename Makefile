@@ -4,21 +4,26 @@ all: build
 .PHONY: build
 build: cloud-burster
 
+.PHONY: test
+test: unit
+
+.PHONY: cloud-burster
 cloud-burster:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o $@ ./cmd
+	mkdir -p build
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./build/$@ ./cmd
 
 .PHONY: unit
 unit:
-	go test -v -race -covermode=atomic -tags=unit -timeout=30s ./...
+	go test -race -covermode=atomic -tags=unit -timeout=30s ./...
 
 .PHONY: coverage
 coverage:
-	go test -v -race -covermode=atomic -tags=unit -timeout=30s -coverprofile=coverage.out ./...
+	go test -race -covermode=atomic -tags=unit -timeout=30s -coverprofile=coverage.out ./...
 	go tool cover -html coverage.out -o coverage.html
 
 .PHONY: integration
 integration:
-	go test -v -race -covermode=atomic -tags=integration -timeout=30s ./...
+	go test -race -covermode=atomic -tags=integration -timeout=30s ./...
 
 .PHONY: lint
 lint:

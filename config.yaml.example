@@ -23,7 +23,7 @@ clouds:
     openstack:
       enabled: true
       identityEndpoint: https://auth.cloud.ovh.net/
-      user: user-79q6gZ9jD2Mw
+      username: user-79q6gZ9jD2Mw
       password: ''
       region: GRA9
       tenantID: 9adc45ea0a4e4d84a5acff1d829613e0

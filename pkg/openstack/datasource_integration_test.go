@@ -6,13 +6,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gophercloud/gophercloud"
-	ostack "github.com/gophercloud/gophercloud/openstack"
 	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/squarefactory/cloud-burster/pkg/openstack"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 )
 
 var (
@@ -43,13 +40,14 @@ var (
 
 type DataSourceTestSuite struct {
 	suite.Suite
-	endpoint    string
-	user        string
-	password    string
-	region      string
-	projectName string
-	projectID   string
-	impl        *openstack.DataSource
+	endpoint   string
+	user       string
+	password   string
+	region     string
+	tenantName string
+	tenantID   string
+	domainID   string
+	impl       *openstack.DataSource
 }
 
 func (suite *DataSourceTestSuite) TestFindImageID() {
@@ -123,7 +121,7 @@ func (suite *DataSourceTestSuite) TestCreatePort() {
 
 func (suite *DataSourceTestSuite) TestCreate() {
 	// Act
-	res, err := suite.impl.Create(
+	err := suite.impl.Create(
 		hostConfig,
 		networkConfig,
 		cloudConfig,
@@ -131,11 +129,6 @@ func (suite *DataSourceTestSuite) TestCreate() {
 
 	// Assert
 	suite.NoError(err)
-	suite.NotNil(res)
-
-	if res == nil {
-		return
-	}
 
 	// Cleanup
 	err = suite.impl.Delete(hostConfig.Name)
@@ -145,35 +138,36 @@ func (suite *DataSourceTestSuite) TestCreate() {
 }
 
 func (suite *DataSourceTestSuite) BeforeTest(suiteName, testName string) {
-	client, err := ostack.AuthenticatedClient(gophercloud.AuthOptions{
-		IdentityEndpoint: suite.endpoint,
-		Username:         suite.user,
-		Password:         suite.password,
-		TenantID:         suite.projectID,
-		TenantName:       suite.projectName,
-		DomainID:         "default",
-	})
-	if err != nil {
-		logger.I.Panic("failed to authenticate client", zap.Error(err))
-	}
-	suite.impl = openstack.New(client, suite.region)
+	suite.impl = openstack.New(
+		suite.endpoint,
+		suite.user,
+		suite.password,
+		suite.tenantID,
+		suite.tenantName,
+		suite.region,
+		suite.domainID,
+	)
 }
 func TestDataSourceTestSuite(t *testing.T) {
 	user := os.Getenv("OS_USERNAME")
 	password := os.Getenv("OS_PASSWORD")
 	endpoint := os.Getenv("OS_AUTH_URL")
 	region := os.Getenv("OS_REGION_NAME")
-	projectName := os.Getenv("OS_PROJECT_NAME")
-	projectID := os.Getenv("OS_PROJECT_ID")
+	tenantName := os.Getenv("OS_PROJECT_NAME")
+	tenantID := os.Getenv("OS_PROJECT_ID")
+	domainID := os.Getenv("OS_PROJECT_DOMAIN_ID")
 	// Skip test if not defined
-	if user == "" || password == "" || endpoint == "" || projectName == "" || projectID == "" || region == "" {
+	if user == "" || password == "" || endpoint == "" || tenantName == "" || tenantID == "" || region == "" || domainID == "" {
 		logger.I.Warn("mandatory variables are not set!")
 	} else {
 		suite.Run(t, &DataSourceTestSuite{
-			endpoint: endpoint,
-			user:     user,
-			password: password,
-			region:   region,
+			endpoint:   endpoint,
+			user:       user,
+			password:   password,
+			region:     region,
+			tenantName: tenantName,
+			tenantID:   tenantID,
+			domainID:   domainID,
 		})
 	}
 }

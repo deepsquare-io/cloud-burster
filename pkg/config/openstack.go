@@ -5,7 +5,7 @@ import "github.com/squarefactory/cloud-burster/validate"
 type Openstack struct {
 	Enabled          bool   `yaml:"enabled"`
 	IdentityEndpoint string `yaml:"identityEndpoint" validate:"omitempty,url"`
-	User             string `yaml:"user" validate:"omitempty"`
+	UserName         string `yaml:"username" validate:"omitempty"`
 	Password         string `yaml:"password" validate:"omitempty"`
 	TenantID         string `yaml:"tenantID" validate:"omitempty"`
 	TenantName       string `yaml:"tenantName" validate:"omitempty"`
