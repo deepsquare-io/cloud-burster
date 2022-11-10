@@ -5,7 +5,9 @@ import (
 	"os"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/validate"
+	"go.uber.org/zap"
 
 	"gopkg.in/yaml.v3"
 )
@@ -18,7 +20,9 @@ func equalAPIVersion(fl validator.FieldLevel) bool {
 }
 
 func init() {
-	validate.I.RegisterValidation("equalAPI", equalAPIVersion)
+	if err := validate.I.RegisterValidation("equalAPI", equalAPIVersion); err != nil {
+		logger.I.Fatal("couldn't register validation", zap.Any("validator", equalAPIVersion))
+	}
 }
 
 type Config struct {
