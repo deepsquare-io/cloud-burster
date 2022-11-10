@@ -27,6 +27,13 @@ func (suite *GeneratorsTestSuite) TestSplitCommaOutsideOfBrackets() {
 			title: "Positive test",
 		},
 		{
+			input: "cn[1,2]",
+			expected: []string{
+				"cn[1,2]",
+			},
+			title: "Positive test: one word",
+		},
+		{
 			input:    "",
 			expected: []string{""},
 			title:    "Empty test",

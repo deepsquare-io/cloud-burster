@@ -61,10 +61,10 @@ var cleanConfig = &config.Config{
 			Openstack: config.Openstack{
 				Enabled:          true,
 				IdentityEndpoint: "https://auth.cloud.ovh.net/",
-				UserName:         "user-79q6gZ9jD2Mw",
+				UserName:         "user",
 				Password:         "",
-				TenantID:         "9adc45ea0a4e4d84a5acff1d829613e0",
-				TenantName:       "6246671714361170",
+				TenantID:         "tenantID",
+				TenantName:       "tenantName",
 				DomainID:         "default",
 				Region:           "GRA9",
 			},
@@ -115,11 +115,11 @@ clouds:
     openstack:
       enabled: true
       identityEndpoint: https://auth.cloud.ovh.net/
-      username: user-79q6gZ9jD2Mw
+      username: user
       password: ''
       region: GRA9
-      tenantID: 9adc45ea0a4e4d84a5acff1d829613e0
-      tenantName: '6246671714361170'
+      tenantID: tenantID
+      tenantName: 'tenantName'
       domainID: default`, config.APIVersion),
 			isError:  false,
 			expected: cleanConfig,
@@ -151,11 +151,11 @@ clouds:
     openstack:
       enabled: true
       identityEndpoint: https://auth.cloud.ovh.net/
-      username: user-79q6gZ9jD2Mw
+      username: user
       password: ''
       region: GRA9
-      tenantID: 9adc45ea0a4e4d84a5acff1d829613e0
-      tenantName: '6246671714361170'
+      tenantID: tenantID
+      tenantName: 'tenantName'
       domainID: default`,
 			isError: true,
 			expected: &config.Config{
@@ -194,10 +194,10 @@ clouds:
 						Openstack: config.Openstack{
 							Enabled:          true,
 							IdentityEndpoint: "https://auth.cloud.ovh.net/",
-							UserName:         "user-79q6gZ9jD2Mw",
+							UserName:         "user",
 							Password:         "",
-							TenantID:         "9adc45ea0a4e4d84a5acff1d829613e0",
-							TenantName:       "6246671714361170",
+							TenantID:         "tenantID",
+							TenantName:       "tenantName",
 							DomainID:         "default",
 							Region:           "GRA9",
 						},
@@ -232,11 +232,11 @@ clouds:
     openstack:
       enabled: true
       identityEndpoint: https://auth.cloud.ovh.net/
-      username: user-79q6gZ9jD2Mw
+      username: user
       password: ''
       region: GRA9
-      tenantID: 9adc45ea0a4e4d84a5acff1d829613e0
-      tenantName: '6246671714361170'
+      tenantID: tenantID
+      tenantName: 'tenantName'
       domainID: default`, config.APIVersion),
 			isError: true,
 			expected: &config.Config{
@@ -275,10 +275,10 @@ clouds:
 						Openstack: config.Openstack{
 							Enabled:          true,
 							IdentityEndpoint: "https://auth.cloud.ovh.net/",
-							UserName:         "user-79q6gZ9jD2Mw",
+							UserName:         "user",
 							Password:         "",
-							TenantID:         "9adc45ea0a4e4d84a5acff1d829613e0",
-							TenantName:       "6246671714361170",
+							TenantID:         "tenantID",
+							TenantName:       "tenantName",
 							DomainID:         "default",
 							Region:           "GRA9",
 						},
@@ -349,10 +349,10 @@ func (suite *ConfigTestSuite) TestParseFile() {
 				Openstack: config.Openstack{
 					Enabled:          true,
 					IdentityEndpoint: "https://auth.cloud.ovh.net/",
-					UserName:         "user-79q6gZ9jD2Mw",
+					UserName:         "user",
 					Password:         "",
-					TenantID:         "9adc45ea0a4e4d84a5acff1d829613e0",
-					TenantName:       "6246671714361170",
+					TenantID:         "tenantID",
+					TenantName:       "tenantName",
 					DomainID:         "default",
 					Region:           "GRA9",
 				},
