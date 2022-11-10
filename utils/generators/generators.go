@@ -1,15 +1,10 @@
-package config
+package generators
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/squarefactory/cloud-burster/logger"
-	"github.com/squarefactory/cloud-burster/utils/cidr"
-	"go.uber.org/zap"
 )
 
 var matchCommaOutsideOfBrackets = regexp.MustCompile(`(?:\[+[^\[\]]*\]+|[^,])+`)
@@ -97,39 +92,4 @@ func ParseRangeList(ranges string) []int {
 		}
 	}
 	return digits
-}
-
-func GenerateHostsFromGroupHost(group GroupHost) ([]Host, error) {
-	var out []Host
-
-	// Generates names based on Name Pattern
-	names := ExpandBrackets(group.NamePattern)
-
-	// Generates IPs
-	ipAddresses := cidr.Hosts(group.IPcidr)
-
-	if len(names) > len(ipAddresses) {
-		logger.I.Error(
-			"not enough IP addresses in CIDR",
-			zap.String("namePattern", group.NamePattern),
-			zap.Int("len(namePattern)", len(names)),
-			zap.String("ipCIDR", group.IPcidr),
-			zap.Int("len(ipAddresses)", len(ipAddresses)),
-		)
-		return []Host{}, errors.New("not enough IP addresses in CIDR")
-	}
-
-	// Map the names into host
-	for idx, name := range names {
-		host := Host{
-			Name:       name,
-			DiskSize:   group.HostTemplate.DiskSize,
-			FlavorName: group.HostTemplate.FlavorName,
-			ImageName:  group.HostTemplate.ImageName,
-			IP:         ipAddresses[idx],
-		}
-		out = append(out, host)
-	}
-
-	return out, nil
 }
