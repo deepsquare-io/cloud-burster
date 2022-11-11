@@ -26,13 +26,15 @@ func (suite *GroupHostTestSuite) TestValidate() {
 		{
 			input: `namePattern: 'cn-[1-10]'
 ipCIDR: 172.24.0.0/20
+ipOffset: 5
 template:
   imageName: image
   diskSize: 50
   flavorName: flavor`,
 			expected: &config.GroupHost{
 				NamePattern: "cn-[1-10]",
-				IPcidr:      "172.24.0.0/20",
+				IPCidr:      "172.24.0.0/20",
+				IPOffset:    5,
 				HostTemplate: config.Host{
 					DiskSize:   50,
 					FlavorName: "flavor",
@@ -44,6 +46,7 @@ template:
 		{
 			input: `namePattern: ''
 ipCIDR: 172.24.0.0/20
+ipOffset: 5
 template:
   imageName: image
   diskSize: 50
@@ -51,7 +54,8 @@ template:
 			isError: true,
 			expected: &config.GroupHost{
 				NamePattern: "",
-				IPcidr:      "172.24.0.0/20",
+				IPCidr:      "172.24.0.0/20",
+				IPOffset:    5,
 				HostTemplate: config.Host{
 					DiskSize:   50,
 					FlavorName: "flavor",
@@ -63,6 +67,7 @@ template:
 		{
 			input: `namePattern: 'name'
 ipCIDR: ''
+ipOffset: 5
 template:
   imageName: image
   diskSize: 50
@@ -70,7 +75,8 @@ template:
 			isError: true,
 			expected: &config.GroupHost{
 				NamePattern: "name",
-				IPcidr:      "",
+				IPCidr:      "",
+				IPOffset:    5,
 				HostTemplate: config.Host{
 					DiskSize:   50,
 					FlavorName: "flavor",
@@ -82,6 +88,7 @@ template:
 		{
 			input: `namePattern: 'name'
 ipCIDR: '172.24.0.0'
+ipOffset: 5
 template:
   imageName: image
   diskSize: 50
@@ -89,7 +96,8 @@ template:
 			isError: true,
 			expected: &config.GroupHost{
 				NamePattern: "name",
-				IPcidr:      "172.24.0.0",
+				IPOffset:    5,
+				IPCidr:      "172.24.0.0",
 				HostTemplate: config.Host{
 					DiskSize:   50,
 					FlavorName: "flavor",
@@ -101,6 +109,7 @@ template:
 		{
 			input: `namePattern: 'name'
 ipCIDR: '172.24.0.0/24'
+ipOffset: 5
 template:
   imageName: ''
   diskSize: 50
@@ -108,7 +117,8 @@ template:
 			isError: true,
 			expected: &config.GroupHost{
 				NamePattern: "name",
-				IPcidr:      "172.24.0.0/24",
+				IPCidr:      "172.24.0.0/24",
+				IPOffset:    5,
 				HostTemplate: config.Host{
 					DiskSize:   50,
 					FlavorName: "flavor",
@@ -156,7 +166,8 @@ func (suite *GroupHostTestSuite) TestGenerateHosts() {
 		{
 			input: config.GroupHost{
 				NamePattern:  "cn[1-5]",
-				IPcidr:       "172.20.0.0/20",
+				IPCidr:       "172.20.0.0/20",
+				IPOffset:     5,
 				HostTemplate: hostTemplate,
 			},
 			isError: false,
@@ -166,35 +177,35 @@ func (suite *GroupHostTestSuite) TestGenerateHosts() {
 					DiskSize:   hostTemplate.DiskSize,
 					FlavorName: hostTemplate.FlavorName,
 					ImageName:  hostTemplate.ImageName,
-					IP:         "172.20.0.1",
+					IP:         "172.20.0.6",
 				},
 				{
 					Name:       "cn2",
 					DiskSize:   hostTemplate.DiskSize,
 					FlavorName: hostTemplate.FlavorName,
 					ImageName:  hostTemplate.ImageName,
-					IP:         "172.20.0.2",
+					IP:         "172.20.0.7",
 				},
 				{
 					Name:       "cn3",
 					DiskSize:   hostTemplate.DiskSize,
 					FlavorName: hostTemplate.FlavorName,
 					ImageName:  hostTemplate.ImageName,
-					IP:         "172.20.0.3",
+					IP:         "172.20.0.8",
 				},
 				{
 					Name:       "cn4",
 					DiskSize:   hostTemplate.DiskSize,
 					FlavorName: hostTemplate.FlavorName,
 					ImageName:  hostTemplate.ImageName,
-					IP:         "172.20.0.4",
+					IP:         "172.20.0.9",
 				},
 				{
 					Name:       "cn5",
 					DiskSize:   hostTemplate.DiskSize,
 					FlavorName: hostTemplate.FlavorName,
 					ImageName:  hostTemplate.ImageName,
-					IP:         "172.20.0.5",
+					IP:         "172.20.0.10",
 				},
 			},
 			title: "Positive test",
@@ -202,7 +213,7 @@ func (suite *GroupHostTestSuite) TestGenerateHosts() {
 		{
 			input: config.GroupHost{
 				NamePattern:  "cn[1-2000]",
-				IPcidr:       "172.20.0.0/24",
+				IPCidr:       "172.20.0.0/24",
 				HostTemplate: hostTemplate,
 			},
 			isError:  true,

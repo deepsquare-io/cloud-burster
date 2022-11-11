@@ -2,7 +2,9 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/squarefactory/cloud-burster/logger"
@@ -85,6 +87,32 @@ func (c *Config) SearchHostByHostName(hostname string) (*Host, *Cloud, error) {
 	}
 
 	return foundHost, foundCloud, nil
+}
+
+// GenerateHosts generates hosts for the DNS server
+func (c *Config) GenerateHosts() (string, error) {
+	var sb strings.Builder
+
+	// Search in all clouds
+	for _, cloud := range c.Clouds {
+		// Search in all hosts
+		for _, host := range cloud.Hosts {
+			sb.WriteString(fmt.Sprintf("%s %s\n", host.IP, host.Name))
+		}
+
+		// Search in all groups host
+		for _, groupsHost := range cloud.GroupsHost {
+			hosts, err := groupsHost.GenerateHosts()
+			if err != nil {
+				return "", err
+			}
+			for _, host := range hosts {
+				sb.WriteString(fmt.Sprintf("%s %s\n", host.IP, host.Name))
+			}
+		}
+	}
+
+	return sb.String(), nil
 }
 
 func ParseFile(filePath string) (*Config, error) {

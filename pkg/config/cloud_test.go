@@ -62,7 +62,7 @@ openstack:
 				GroupsHost: []config.GroupHost{
 					{
 						NamePattern: "cn-s-[1-50].example.com",
-						IPcidr:      "172.28.0.0/20",
+						IPCidr:      "172.28.0.0/20",
 						HostTemplate: config.Host{
 							DiskSize:   50,
 							FlavorName: "d2-2",
@@ -129,7 +129,7 @@ openstack:
 				GroupsHost: []config.GroupHost{
 					{
 						NamePattern: "cn-s-[1-50].example.com",
-						IPcidr:      "172.28.0.0/20",
+						IPCidr:      "172.28.0.0/20",
 						HostTemplate: config.Host{
 							DiskSize:   50,
 							FlavorName: "d2-2",
@@ -203,7 +203,7 @@ openstack:
 				GroupsHost: []config.GroupHost{
 					{
 						NamePattern: "",
-						IPcidr:      "172.28.0.0/20",
+						IPCidr:      "172.28.0.0/20",
 						HostTemplate: config.Host{
 							DiskSize:   50,
 							FlavorName: "d2-2",
@@ -277,7 +277,7 @@ openstack:
 				GroupsHost: []config.GroupHost{
 					{
 						NamePattern: "cn-s-[1-50].example.com",
-						IPcidr:      "172.28.0.0/20",
+						IPCidr:      "172.28.0.0/20",
 						HostTemplate: config.Host{
 							DiskSize:   50,
 							FlavorName: "d2-2",
@@ -351,7 +351,7 @@ openstack:
 				GroupsHost: []config.GroupHost{
 					{
 						NamePattern: "cn-s-[1-50].example.com",
-						IPcidr:      "172.28.0.0/20",
+						IPCidr:      "172.28.0.0/20",
 						HostTemplate: config.Host{
 							DiskSize:   50,
 							FlavorName: "d2-2",
@@ -416,7 +416,7 @@ cloudConfig:
 				GroupsHost: []config.GroupHost{
 					{
 						NamePattern: "cn-s-[1-50].example.com",
-						IPcidr:      "172.28.0.0/20",
+						IPCidr:      "172.28.0.0/20",
 						HostTemplate: config.Host{
 							DiskSize:   50,
 							FlavorName: "d2-2",

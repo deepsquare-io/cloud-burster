@@ -36,7 +36,7 @@ var cleanConfig = &config.Config{
 			GroupsHost: []config.GroupHost{
 				{
 					NamePattern: "cn-s-[1-50].example.com",
-					IPcidr:      "172.28.0.0/20",
+					IPCidr:      "172.28.0.0/20",
 					HostTemplate: config.Host{
 						DiskSize:   50,
 						FlavorName: "d2-2",
@@ -169,7 +169,7 @@ clouds:
 						GroupsHost: []config.GroupHost{
 							{
 								NamePattern: "cn-s-[1-50].example.com",
-								IPcidr:      "172.28.0.0/20",
+								IPCidr:      "172.28.0.0/20",
 								HostTemplate: config.Host{
 									DiskSize:   50,
 									FlavorName: "d2-2",
@@ -250,7 +250,7 @@ clouds:
 						GroupsHost: []config.GroupHost{
 							{
 								NamePattern: "cn-s-[1-50].example.com",
-								IPcidr:      "172.28.0.0/20",
+								IPCidr:      "172.28.0.0/20",
 								HostTemplate: config.Host{
 									DiskSize:   50,
 									FlavorName: "d2-2",
@@ -324,7 +324,7 @@ func (suite *ConfigTestSuite) TestParseFile() {
 				GroupsHost: []config.GroupHost{
 					{
 						NamePattern: "cn-s-[1-50].example.com",
-						IPcidr:      "172.28.0.0/20",
+						IPCidr:      "172.28.0.0/20",
 						HostTemplate: config.Host{
 							DiskSize:   50,
 							FlavorName: "d2-2",
@@ -417,6 +417,57 @@ func (suite *ConfigTestSuite) TestSearchHostByHostName() {
 			suite.Equal(tt.expectedCloud, cloud)
 		})
 	}
+}
+
+func (suite *ConfigTestSuite) TestGenerateHosts() {
+	// Arrange
+	conf := &config.Config{
+		APIVersion: config.APIVersion,
+		Clouds: []config.Cloud{
+			{
+				Network:                 cleanConfig.Clouds[0].Network,
+				CloudConfigTemplateOpts: cleanConfig.Clouds[0].CloudConfigTemplateOpts,
+				Openstack:               cleanConfig.Clouds[0].Openstack,
+				GroupsHost: []config.GroupHost{
+					{
+						NamePattern: "cn-[1-5]",
+						IPCidr:      "172.28.0.0/20",
+						IPOffset:    256,
+						HostTemplate: config.Host{
+							DiskSize:   50,
+							FlavorName: "flavor",
+							ImageName:  "image",
+						},
+					},
+				},
+				Hosts: []config.Host{
+					{
+						Name:       "cn-test",
+						DiskSize:   50,
+						FlavorName: "flavor",
+						ImageName:  "image",
+						IP:         "10.10.10.10",
+					},
+				},
+			},
+		},
+	}
+	err := conf.Validate()
+	expected := `10.10.10.10 cn-test
+172.28.1.1 cn-1
+172.28.1.2 cn-2
+172.28.1.3 cn-3
+172.28.1.4 cn-4
+172.28.1.5 cn-5
+`
+	suite.NoError(err)
+
+	// Act
+	actual, err := conf.GenerateHosts()
+
+	// Assert
+	suite.NoError(err)
+	suite.Equal(expected, actual)
 }
 
 func TestConfigTestSuite(t *testing.T) {
