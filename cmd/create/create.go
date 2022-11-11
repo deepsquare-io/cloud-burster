@@ -93,7 +93,7 @@ var Command = &cli.Command{
 			return err
 		}
 
-		logger.I.Info("Success command successful.")
+		logger.I.Info("Create command successful.")
 
 		return nil
 	},

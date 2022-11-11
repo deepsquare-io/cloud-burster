@@ -2,6 +2,7 @@ package openstack
 
 import (
 	"errors"
+	"net/http"
 	"time"
 
 	"github.com/gophercloud/gophercloud"
@@ -43,6 +44,9 @@ func New(
 		TenantName:       tenantName,
 		DomainID:         domainID,
 	})
+	provider.HTTPClient.Transport = &RoundTripper{
+		RoundTripper: http.DefaultTransport,
+	}
 	if err != nil {
 		logger.I.Panic("failed to authenticate client", zap.Error(err))
 	}
