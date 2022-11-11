@@ -325,6 +325,7 @@ func (suite *ConfigTestSuite) TestParseFile() {
 					{
 						NamePattern: "cn-s-[1-50].example.com",
 						IPCidr:      "172.28.0.0/20",
+						IPOffset:    256,
 						HostTemplate: config.Host{
 							DiskSize:   50,
 							FlavorName: "d2-2",

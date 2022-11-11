@@ -5,6 +5,7 @@ import (
 
 	"github.com/squarefactory/cloud-burster/cmd/create"
 	"github.com/squarefactory/cloud-burster/cmd/delete"
+	"github.com/squarefactory/cloud-burster/cmd/generate"
 	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
@@ -19,14 +20,14 @@ var flags = []cli.Flag{
 		},
 		Aliases: []string{"c"},
 		Action: func(ctx *cli.Context, s string) error {
-			info, err := os.Stat("s")
+			info, err := os.Stat(s)
 			if err != nil {
 				return err
 			}
 			perms := info.Mode().Perm()
-			if perms != 0o600 {
+			if perms&0o077 != 0 {
 				logger.I.Fatal(
-					"incorrect permisisons for config file, must be 0600",
+					"incorrect permisisons for config file, must be user-only",
 					zap.String("config.path", s),
 					zap.Stringer("permissions", perms),
 				)
@@ -43,6 +44,7 @@ var app = &cli.App{
 	Commands: []*cli.Command{
 		create.Command,
 		delete.Command,
+		generate.Command,
 	},
 	Suggest: true,
 }

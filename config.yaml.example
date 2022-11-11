@@ -6,6 +6,7 @@ clouds:
     groupsHost:
       - namePattern: cn-s-[1-50].example.com
         ipCIDR: 172.28.0.0/20
+        ipOffset: 256
         template:
           diskSize: 50
           flavorName: 'd2-2'
