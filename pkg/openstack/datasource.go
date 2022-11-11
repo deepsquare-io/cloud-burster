@@ -328,10 +328,6 @@ func (s *DataSource) FindServerID(name string) (string, error) {
 			return false, err
 		}
 
-		if len(list) < 1 {
-			return false, errors.New("didn't find a server")
-		}
-
 		for _, server := range list {
 			if server.Name == name {
 				result = server
@@ -345,6 +341,9 @@ func (s *DataSource) FindServerID(name string) (string, error) {
 		return "", err
 	}
 
+	if result.ID == "" {
+		return "", errors.New("didn't find a server")
+	}
 	logger.I.Debug("FindServerID returned", zap.Any("server", result))
 	return result.ID, nil
 }

@@ -58,7 +58,7 @@ var Command = &cli.Command{
 				}
 
 				// Instanciate the corresponding cloud
-				cloudWorker, err := cloud.Create(cl)
+				cloudWorker, err := cloud.New(cl)
 				if err != nil {
 					errChan <- err
 					return
@@ -67,6 +67,7 @@ var Command = &cli.Command{
 				if err := cloudWorker.Create(host, &cl.Network, &cl.CloudConfigTemplateOpts); err != nil {
 					logger.I.Warn(
 						"couldn't create the host",
+						zap.Error(err),
 						zap.Any("host", host),
 						zap.Any("network", cl.Network),
 						zap.Any("cloudConfig", cl.CloudConfigTemplateOpts),
@@ -82,10 +83,14 @@ var Command = &cli.Command{
 			close(errChan)
 		}()
 
-		for err := range errChan {
-			if err != nil {
-				return err
+		for e := range errChan {
+			if e != nil {
+				logger.I.Error("create thrown an error", zap.Error(e))
+				err = e
 			}
+		}
+		if err != nil {
+			return err
 		}
 
 		logger.I.Info("Success command successful.")

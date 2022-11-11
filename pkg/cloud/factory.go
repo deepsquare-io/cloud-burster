@@ -18,7 +18,7 @@ type DataSource interface {
 	Delete(name string) error
 }
 
-func Create(conf *config.Cloud) (DataSource, error) {
+func New(conf *config.Cloud) (DataSource, error) {
 	if conf.Openstack.Enabled {
 		return openstack.New(
 			conf.Openstack.IdentityEndpoint,

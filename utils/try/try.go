@@ -1,6 +1,11 @@
 package try
 
-import "time"
+import (
+	"time"
+
+	"github.com/squarefactory/cloud-burster/logger"
+	"go.uber.org/zap"
+)
 
 func Do[T interface{}](
 	fn func() (T, error),
@@ -12,6 +17,7 @@ func Do[T interface{}](
 		if err == nil {
 			break
 		}
+		logger.I.Warn("try failed", zap.Error(err), zap.Int("try", try))
 		time.Sleep(delay)
 	}
 	return result, err
