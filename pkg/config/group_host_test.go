@@ -9,8 +9,18 @@ import (
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
 )
+
+var cleanGroupHost = config.GroupHost{
+	NamePattern: "cn-s-[1-50].example.com",
+	IPCidr:      "172.28.0.0/20",
+	IPOffset:    256,
+	HostTemplate: config.Host{
+		DiskSize:   50,
+		FlavorName: "d2-2",
+		ImageName:  "Rocky Linux 9",
+	},
+}
 
 type GroupHostTestSuite struct {
 	suite.Suite
@@ -18,112 +28,51 @@ type GroupHostTestSuite struct {
 
 func (suite *GroupHostTestSuite) TestValidate() {
 	tests := []struct {
-		input    string
-		expected *config.GroupHost
-		isError  bool
-		title    string
+		input   *config.GroupHost
+		isError bool
+		title   string
 	}{
 		{
-			input: `namePattern: 'cn-[1-10]'
-ipCIDR: 172.24.0.0/20
-ipOffset: 5
-template:
-  imageName: image
-  diskSize: 50
-  flavorName: flavor`,
-			expected: &config.GroupHost{
-				NamePattern: "cn-[1-10]",
-				IPCidr:      "172.24.0.0/20",
-				IPOffset:    5,
-				HostTemplate: config.Host{
-					DiskSize:   50,
-					FlavorName: "flavor",
-					ImageName:  "image",
-				},
-			},
+			input: &cleanGroupHost,
 			title: "Positive test",
 		},
 		{
-			input: `namePattern: ''
-ipCIDR: 172.24.0.0/20
-ipOffset: 5
-template:
-  imageName: image
-  diskSize: 50
-  flavorName: flavor`,
 			isError: true,
-			expected: &config.GroupHost{
-				NamePattern: "",
-				IPCidr:      "172.24.0.0/20",
-				IPOffset:    5,
-				HostTemplate: config.Host{
-					DiskSize:   50,
-					FlavorName: "flavor",
-					ImageName:  "image",
-				},
+			input: &config.GroupHost{
+				NamePattern:  "",
+				IPCidr:       cleanGroupHost.IPCidr,
+				IPOffset:     cleanGroupHost.IPOffset,
+				HostTemplate: cleanGroupHost.HostTemplate,
 			},
 			title: "namePattern required",
 		},
 		{
-			input: `namePattern: 'name'
-ipCIDR: ''
-ipOffset: 5
-template:
-  imageName: image
-  diskSize: 50
-  flavorName: flavor`,
 			isError: true,
-			expected: &config.GroupHost{
-				NamePattern: "name",
-				IPCidr:      "",
-				IPOffset:    5,
-				HostTemplate: config.Host{
-					DiskSize:   50,
-					FlavorName: "flavor",
-					ImageName:  "image",
-				},
+			input: &config.GroupHost{
+				NamePattern:  cleanGroupHost.NamePattern,
+				IPCidr:       "",
+				IPOffset:     cleanGroupHost.IPOffset,
+				HostTemplate: cleanGroupHost.HostTemplate,
 			},
 			title: "ipCIDR required",
 		},
 		{
-			input: `namePattern: 'name'
-ipCIDR: '172.24.0.0'
-ipOffset: 5
-template:
-  imageName: image
-  diskSize: 50
-  flavorName: flavor`,
 			isError: true,
-			expected: &config.GroupHost{
-				NamePattern: "name",
-				IPOffset:    5,
-				IPCidr:      "172.24.0.0",
-				HostTemplate: config.Host{
-					DiskSize:   50,
-					FlavorName: "flavor",
-					ImageName:  "image",
-				},
+			input: &config.GroupHost{
+				NamePattern:  cleanGroupHost.NamePattern,
+				IPCidr:       "172.24.0.0",
+				IPOffset:     cleanGroupHost.IPOffset,
+				HostTemplate: cleanGroupHost.HostTemplate,
 			},
 			title: "ipCIDR valid",
 		},
 		{
-			input: `namePattern: 'name'
-ipCIDR: '172.24.0.0/24'
-ipOffset: 5
-template:
-  imageName: ''
-  diskSize: 50
-  flavorName: flavor`,
 			isError: true,
-			expected: &config.GroupHost{
-				NamePattern: "name",
-				IPCidr:      "172.24.0.0/24",
-				IPOffset:    5,
-				HostTemplate: config.Host{
-					DiskSize:   50,
-					FlavorName: "flavor",
-					ImageName:  "",
-				},
+			input: &config.GroupHost{
+				NamePattern:  cleanGroupHost.NamePattern,
+				IPCidr:       cleanGroupHost.IPCidr,
+				IPOffset:     cleanGroupHost.IPOffset,
+				HostTemplate: config.Host{},
 			},
 			title: "hostTemplate valid",
 		},
@@ -131,22 +80,16 @@ template:
 
 	for _, tt := range tests {
 		suite.Run(tt.title, func() {
-			// Arrange
-			config := &config.GroupHost{}
-			err := yaml.Unmarshal([]byte(tt.input), config)
-			suite.NoError(err)
-
 			// Act
-			err = config.Validate()
+			err := tt.input.Validate()
 
 			// Assert
 			if tt.isError {
-				logger.I.Debug("expected error", zap.Error(err))
+				logger.I.Info("expected error", zap.Error(err))
 				suite.Error(err)
 			} else {
 				suite.NoError(err)
 			}
-			suite.Equal(tt.expected, config)
 		})
 	}
 }
@@ -229,7 +172,7 @@ func (suite *GroupHostTestSuite) TestGenerateHosts() {
 
 			// Assert
 			if tt.isError {
-				logger.I.Debug("expected error", zap.Error(err))
+				logger.I.Info("expected error", zap.Error(err))
 				suite.Error(err)
 			} else {
 				suite.NoError(err)

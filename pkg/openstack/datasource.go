@@ -17,6 +17,7 @@ import (
 	"github.com/gophercloud/gophercloud/pagination"
 	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/config"
+	"github.com/squarefactory/cloud-burster/pkg/middlewares"
 	"github.com/squarefactory/cloud-burster/utils/try"
 	"go.uber.org/zap"
 )
@@ -44,7 +45,7 @@ func New(
 		TenantName:       tenantName,
 		DomainID:         domainID,
 	})
-	provider.HTTPClient.Transport = &RoundTripper{
+	provider.HTTPClient.Transport = &middlewares.RoundTripper{
 		RoundTripper: http.DefaultTransport,
 	}
 	if err != nil {

@@ -3,14 +3,13 @@ package config
 import "github.com/squarefactory/cloud-burster/validate"
 
 type Openstack struct {
-	Enabled          bool   `yaml:"enabled"`
 	IdentityEndpoint string `yaml:"identityEndpoint" validate:"omitempty,url"`
-	UserName         string `yaml:"username" validate:"omitempty"`
-	Password         string `yaml:"password" validate:"omitempty"`
-	TenantID         string `yaml:"tenantID" validate:"omitempty"`
-	TenantName       string `yaml:"tenantName" validate:"omitempty"`
-	DomainID         string `yaml:"domainID" validate:"omitempty"`
-	Region           string `yaml:"region" validate:"omitempty"`
+	UserName         string `yaml:"username"`
+	Password         string `yaml:"password"`
+	TenantID         string `yaml:"tenantID"`
+	TenantName       string `yaml:"tenantName"`
+	DomainID         string `yaml:"domainID"`
+	Region           string `yaml:"region"`
 }
 
 func (c *Openstack) Validate() error {

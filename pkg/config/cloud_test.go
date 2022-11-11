@@ -9,8 +9,33 @@ import (
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
 )
+
+var cleanOpenstackCloud = config.Cloud{
+	Network: cleanNetwork,
+	Hosts: []config.Host{
+		cleanHost,
+	},
+	GroupsHost: []config.GroupHost{
+		cleanGroupHost,
+	},
+	Type:                    "openstack",
+	CloudConfigTemplateOpts: cleanCloudConfigTemplateOpts,
+	Openstack:               &cleanOpenstack,
+}
+
+var cleanExoscaleCloud = config.Cloud{
+	Network: cleanNetwork,
+	Hosts: []config.Host{
+		cleanHost,
+	},
+	GroupsHost: []config.GroupHost{
+		cleanGroupHost,
+	},
+	Type:                    "exoscale",
+	CloudConfigTemplateOpts: cleanCloudConfigTemplateOpts,
+	Exoscale:                &cleanExoscale,
+}
 
 type CloudTestSuite struct {
 	suite.Suite
@@ -18,449 +43,95 @@ type CloudTestSuite struct {
 
 func (suite *CloudTestSuite) TestValidate() {
 	tests := []struct {
-		input    string
-		expected *config.Cloud
-		isError  bool
-		title    string
+		input   *config.Cloud
+		isError bool
+		title   string
 	}{
 		{
-			input: `network:
-  name: 'name'
-  subnetCIDR: '172.28.0.0/20'
-groupsHost:
-  - namePattern: cn-s-[1-50].example.com
-    ipCIDR: 172.28.0.0/20
-    template:
-      diskSize: 50
-      flavorName: 'd2-2'
-      imageName: 'Rocky Linux 9'
-cloudConfig:
-  authorizedKeys:
-    - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4'
-  dns: 1.1.1.1
-  search: example.com
-  postScripts:
-    git:
-      key: key
-      url: git@github.com:SquareFactory/compute-configs.git
-      ref: main
-openstack:
-  enabled: true
-  identityEndpoint: https://auth.cloud.ovh.net/
-  username: user
-  password: ''
-  region: GRA9
-  tenantID: tenantID
-  tenantName: 'tenantName'
-  domainID: default`,
 			isError: false,
-			expected: &config.Cloud{
-				Network: config.Network{
-					Name:       "name",
-					SubnetCIDR: "172.28.0.0/20",
-				},
-				GroupsHost: []config.GroupHost{
-					{
-						NamePattern: "cn-s-[1-50].example.com",
-						IPCidr:      "172.28.0.0/20",
-						HostTemplate: config.Host{
-							DiskSize:   50,
-							FlavorName: "d2-2",
-							ImageName:  "Rocky Linux 9",
-						},
-					},
-				},
-				CloudConfigTemplateOpts: config.CloudConfigTemplateOpts{
-					AuthorizedKeys: []string{
-						"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
-					},
-					DNS:    "1.1.1.1",
-					Search: "example.com",
-					PostScripts: config.PostScriptsOpts{
-						Git: config.GitOpts{
-							Key: "key",
-							URL: "git@github.com:SquareFactory/compute-configs.git",
-							Ref: "main",
-						},
-					},
-				},
-				Openstack: config.Openstack{
-					Enabled:          true,
-					IdentityEndpoint: "https://auth.cloud.ovh.net/",
-					UserName:         "user",
-					Password:         "",
-					TenantID:         "tenantID",
-					TenantName:       "tenantName",
-					DomainID:         "default",
-					Region:           "GRA9",
-				},
-			},
-			title: "Positive test",
+			input:   &cleanOpenstackCloud,
 		},
 		{
-			input: `groupsHost:
-  - namePattern: cn-s-[1-50].example.com
-    ipCIDR: 172.28.0.0/20
-    template:
-      diskSize: 50
-      flavorName: 'd2-2'
-      imageName: 'Rocky Linux 9'
-cloudConfig:
-  authorizedKeys:
-    - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4'
-  dns: 1.1.1.1
-  search: example.com
-  postScripts:
-    git:
-      key: key
-      url: git@github.com:SquareFactory/compute-configs.git
-      ref: main
-openstack:
-  enabled: true
-  identityEndpoint: https://auth.cloud.ovh.net/
-  username: user
-  password: ''
-  region: GRA9
-  tenantID: tenantID
-  tenantName: 'tenantName'
-  domainID: default`,
 			isError: true,
-			expected: &config.Cloud{
-				GroupsHost: []config.GroupHost{
-					{
-						NamePattern: "cn-s-[1-50].example.com",
-						IPCidr:      "172.28.0.0/20",
-						HostTemplate: config.Host{
-							DiskSize:   50,
-							FlavorName: "d2-2",
-							ImageName:  "Rocky Linux 9",
-						},
-					},
-				},
-				CloudConfigTemplateOpts: config.CloudConfigTemplateOpts{
-					AuthorizedKeys: []string{
-						"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
-					},
-					DNS:    "1.1.1.1",
-					Search: "example.com",
-					PostScripts: config.PostScriptsOpts{
-						Git: config.GitOpts{
-							Key: "key",
-							URL: "git@github.com:SquareFactory/compute-configs.git",
-							Ref: "main",
-						},
-					},
-				},
-				Openstack: config.Openstack{
-					Enabled:          true,
-					IdentityEndpoint: "https://auth.cloud.ovh.net/",
-					UserName:         "user",
-					Password:         "",
-					TenantID:         "tenantID",
-					TenantName:       "tenantName",
-					DomainID:         "default",
-					Region:           "GRA9",
-				},
+			input: &config.Cloud{
+				GroupsHost:              cleanOpenstackCloud.GroupsHost,
+				CloudConfigTemplateOpts: cleanOpenstackCloud.CloudConfigTemplateOpts,
+				Openstack:               cleanOpenstackCloud.Openstack,
+				Type:                    cleanOpenstackCloud.Type,
 			},
 			title: "Network required/valid",
 		},
 		{
-			input: `network:
-  name: 'name'
-  subnetCIDR: '172.28.0.0/20'
-groupsHost:
-  - namePattern: ''
-    ipCIDR: 172.28.0.0/20
-    template:
-      diskSize: 50
-      flavorName: 'd2-2'
-      imageName: 'Rocky Linux 9'
-cloudConfig:
-  authorizedKeys:
-    - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4'
-  dns: 1.1.1.1
-  search: example.com
-  postScripts:
-    git:
-      key: key
-      url: git@github.com:SquareFactory/compute-configs.git
-      ref: main
-openstack:
-  enabled: true
-  identityEndpoint: https://auth.cloud.ovh.net/
-  username: user
-  password: ''
-  region: GRA9
-  tenantID: tenantID
-  tenantName: 'tenantName'
-  domainID: default`,
 			isError: true,
-			expected: &config.Cloud{
-				Network: config.Network{
-					Name:       "name",
-					SubnetCIDR: "172.28.0.0/20",
-				},
+			input: &config.Cloud{
+				Network: cleanOpenstackCloud.Network,
 				GroupsHost: []config.GroupHost{
-					{
-						NamePattern: "",
-						IPCidr:      "172.28.0.0/20",
-						HostTemplate: config.Host{
-							DiskSize:   50,
-							FlavorName: "d2-2",
-							ImageName:  "Rocky Linux 9",
-						},
-					},
+					{},
 				},
-				CloudConfigTemplateOpts: config.CloudConfigTemplateOpts{
-					AuthorizedKeys: []string{
-						"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
-					},
-					DNS:    "1.1.1.1",
-					Search: "example.com",
-					PostScripts: config.PostScriptsOpts{
-						Git: config.GitOpts{
-							Key: "key",
-							URL: "git@github.com:SquareFactory/compute-configs.git",
-							Ref: "main",
-						},
-					},
-				},
-				Openstack: config.Openstack{
-					Enabled:          true,
-					IdentityEndpoint: "https://auth.cloud.ovh.net/",
-					UserName:         "user",
-					Password:         "",
-					TenantID:         "tenantID",
-					TenantName:       "tenantName",
-					DomainID:         "default",
-					Region:           "GRA9",
-				},
+				CloudConfigTemplateOpts: cleanOpenstackCloud.CloudConfigTemplateOpts,
+				Openstack:               cleanOpenstackCloud.Openstack,
+				Type:                    cleanOpenstackCloud.Type,
 			},
-			title: "GrouHost valid",
+			title: "GroupsHost valid",
 		},
 		{
-			input: `network:
-  name: 'name'
-  subnetCIDR: '172.28.0.0/20'
-groupsHost:
-  - namePattern: cn-s-[1-50].example.com
-    ipCIDR: 172.28.0.0/20
-    template:
-      diskSize: 50
-      flavorName: 'd2-2'
-      imageName: 'Rocky Linux 9'
-cloudConfig:
-  authorizedKeys:
-    - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4'
-  dns: ''
-  search: example.com
-  postScripts:
-    git:
-      key: key
-      url: git@github.com:SquareFactory/compute-configs.git
-      ref: main
-openstack:
-  enabled: true
-  identityEndpoint: https://auth.cloud.ovh.net/
-  username: user
-  password: ''
-  region: GRA9
-  tenantID: tenantID
-  tenantName: 'tenantName'
-  domainID: default`,
 			isError: true,
-			expected: &config.Cloud{
-				Network: config.Network{
-					Name:       "name",
-					SubnetCIDR: "172.28.0.0/20",
-				},
-				GroupsHost: []config.GroupHost{
-					{
-						NamePattern: "cn-s-[1-50].example.com",
-						IPCidr:      "172.28.0.0/20",
-						HostTemplate: config.Host{
-							DiskSize:   50,
-							FlavorName: "d2-2",
-							ImageName:  "Rocky Linux 9",
-						},
-					},
-				},
-				CloudConfigTemplateOpts: config.CloudConfigTemplateOpts{
-					AuthorizedKeys: []string{
-						"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
-					},
-					DNS:    "",
-					Search: "example.com",
-					PostScripts: config.PostScriptsOpts{
-						Git: config.GitOpts{
-							Key: "key",
-							URL: "git@github.com:SquareFactory/compute-configs.git",
-							Ref: "main",
-						},
-					},
-				},
-				Openstack: config.Openstack{
-					Enabled:          true,
-					IdentityEndpoint: "https://auth.cloud.ovh.net/",
-					UserName:         "user",
-					Password:         "",
-					TenantID:         "tenantID",
-					TenantName:       "tenantName",
-					DomainID:         "default",
-					Region:           "GRA9",
-				},
+			input: &config.Cloud{
+				Network:                 cleanOpenstackCloud.Network,
+				GroupsHost:              cleanOpenstackCloud.GroupsHost,
+				CloudConfigTemplateOpts: config.CloudConfigTemplateOpts{},
+				Openstack:               cleanOpenstackCloud.Openstack,
+				Type:                    cleanOpenstackCloud.Type,
 			},
 			title: "cloudConfig valid",
 		},
 		{
-			input: `network:
-  name: 'name'
-  subnetCIDR: '172.28.0.0/20'
-groupsHost:
-  - namePattern: cn-s-[1-50].example.com
-    ipCIDR: 172.28.0.0/20
-    template:
-      diskSize: 50
-      flavorName: 'd2-2'
-      imageName: 'Rocky Linux 9'
-cloudConfig:
-  authorizedKeys:
-    - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4'
-  dns: 1.1.1.1
-  search: example.com
-  postScripts:
-    git:
-      key: key
-      url: git@github.com:SquareFactory/compute-configs.git
-      ref: main
-openstack:
-  enabled: true
-  identityEndpoint: aaa
-  username: user
-  password: ''
-  region: GRA9
-  tenantID: tenantID
-  tenantName: 'tenantName'
-  domainID: default`,
 			isError: true,
-			expected: &config.Cloud{
-				Network: config.Network{
-					Name:       "name",
-					SubnetCIDR: "172.28.0.0/20",
-				},
-				GroupsHost: []config.GroupHost{
-					{
-						NamePattern: "cn-s-[1-50].example.com",
-						IPCidr:      "172.28.0.0/20",
-						HostTemplate: config.Host{
-							DiskSize:   50,
-							FlavorName: "d2-2",
-							ImageName:  "Rocky Linux 9",
-						},
-					},
-				},
-				CloudConfigTemplateOpts: config.CloudConfigTemplateOpts{
-					AuthorizedKeys: []string{
-						"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
-					},
-					DNS:    "1.1.1.1",
-					Search: "example.com",
-					PostScripts: config.PostScriptsOpts{
-						Git: config.GitOpts{
-							Key: "key",
-							URL: "git@github.com:SquareFactory/compute-configs.git",
-							Ref: "main",
-						},
-					},
-				},
-				Openstack: config.Openstack{
-					Enabled:          true,
+			input: &config.Cloud{
+				Network:                 cleanOpenstackCloud.Network,
+				GroupsHost:              cleanOpenstackCloud.GroupsHost,
+				CloudConfigTemplateOpts: cleanOpenstackCloud.CloudConfigTemplateOpts,
+				Type:                    cleanOpenstackCloud.Type,
+				Openstack: &config.Openstack{
 					IdentityEndpoint: "aaa",
-					UserName:         "user",
-					Password:         "",
-					TenantID:         "tenantID",
-					TenantName:       "tenantName",
-					DomainID:         "default",
-					Region:           "GRA9",
 				},
 			},
 			title: "openstack valid",
 		},
 		{
-			input: `network:
-  name: 'name'
-  subnetCIDR: '172.28.0.0/20'
-groupsHost:
-  - namePattern: cn-s-[1-50].example.com
-    ipCIDR: 172.28.0.0/20
-    template:
-      diskSize: 50
-      flavorName: 'd2-2'
-      imageName: 'Rocky Linux 9'
-cloudConfig:
-  authorizedKeys:
-    - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4'
-  dns: 1.1.1.1
-  search: example.com
-  postScripts:
-    git:
-      key: key
-      url: git@github.com:SquareFactory/compute-configs.git
-      ref: main`,
-			isError: false,
-			expected: &config.Cloud{
-				Network: config.Network{
-					Name:       "name",
-					SubnetCIDR: "172.28.0.0/20",
-				},
-				GroupsHost: []config.GroupHost{
-					{
-						NamePattern: "cn-s-[1-50].example.com",
-						IPCidr:      "172.28.0.0/20",
-						HostTemplate: config.Host{
-							DiskSize:   50,
-							FlavorName: "d2-2",
-							ImageName:  "Rocky Linux 9",
-						},
-					},
-				},
-				CloudConfigTemplateOpts: config.CloudConfigTemplateOpts{
-					AuthorizedKeys: []string{
-						"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
-					},
-					DNS:    "1.1.1.1",
-					Search: "example.com",
-					PostScripts: config.PostScriptsOpts{
-						Git: config.GitOpts{
-							Key: "key",
-							URL: "git@github.com:SquareFactory/compute-configs.git",
-							Ref: "main",
-						},
-					},
-				},
+			isError: true,
+			input: &config.Cloud{
+				Network:                 cleanOpenstackCloud.Network,
+				GroupsHost:              cleanOpenstackCloud.GroupsHost,
+				CloudConfigTemplateOpts: cleanOpenstackCloud.CloudConfigTemplateOpts,
+				Type:                    "openstack",
 			},
-			title: "Positive test, allow empty Openstack",
+			title: "If type == openstack, openstack is required",
+		},
+		{
+			isError: true,
+			input: &config.Cloud{
+				Network:                 cleanOpenstackCloud.Network,
+				GroupsHost:              cleanOpenstackCloud.GroupsHost,
+				CloudConfigTemplateOpts: cleanOpenstackCloud.CloudConfigTemplateOpts,
+				Type:                    "exoscale",
+			},
+			title: "If type == exoscale, exoscale is required",
 		},
 	}
 
 	for _, tt := range tests {
 		suite.Run(tt.title, func() {
-			// Arrange
-			config := &config.Cloud{}
-			err := yaml.Unmarshal([]byte(tt.input), config)
-			suite.NoError(err)
-
 			// Act
-			err = config.Validate()
+			err := tt.input.Validate()
 
 			// Assert
 			if tt.isError {
-				logger.I.Debug("expected error", zap.Error(err))
+				logger.I.Info("expected error", zap.Error(err))
 				suite.Error(err)
 			} else {
 				suite.NoError(err)
 			}
-			suite.Equal(tt.expected, config)
 		})
 	}
 }

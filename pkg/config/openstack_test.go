@@ -9,8 +9,17 @@ import (
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
 )
+
+var cleanOpenstack = config.Openstack{
+	IdentityEndpoint: "https://auth.cloud.ovh.net/",
+	UserName:         "user",
+	Password:         "password",
+	TenantID:         "tenantID",
+	TenantName:       "tenantName",
+	DomainID:         "default",
+	Region:           "GRA9",
+}
 
 type OpenstackTestSuite struct {
 	suite.Suite
@@ -18,74 +27,30 @@ type OpenstackTestSuite struct {
 
 func (suite *OpenstackTestSuite) TestValidate() {
 	tests := []struct {
-		input    string
-		expected *config.Openstack
-		isError  bool
-		title    string
+		input   *config.Openstack
+		isError bool
+		title   string
 	}{
 		{
-			input: `enabled: true
-identityEndpoint: 'https://auth.cloud.ovh.net/'
-username: user
-password: ''
-region: GRA9
-tenantID: tenantID
-tenantName: 'tenantName'
-domainID: default`,
 			isError: false,
-			expected: &config.Openstack{
-				Enabled:          true,
-				IdentityEndpoint: "https://auth.cloud.ovh.net/",
-				UserName:         "user",
-				Password:         "",
-				TenantID:         "tenantID",
-				TenantName:       "tenantName",
-				DomainID:         "default",
-				Region:           "GRA9",
-			},
-			title: "Positive test",
+			input:   &cleanOpenstack,
+			title:   "Positive test",
 		},
 		{
-			input: `enabled: false
-identityEndpoint: ''
-username: ''
-password: ''
-region: ''
-tenantID: ''
-tenantName: ''
-domainID: ''`,
 			isError: false,
-			expected: &config.Openstack{
-				Enabled:          false,
-				IdentityEndpoint: "",
-				UserName:         "",
-				Password:         "",
-				TenantID:         "",
-				TenantName:       "",
-				DomainID:         "",
-				Region:           "",
-			},
-			title: "Positive test",
+			input:   &config.Openstack{},
+			title:   "Positive test: Empty fields",
 		},
 		{
-			input: `enabled: true
-identityEndpoint: 'aaa'
-username: user
-password: ''
-region: GRA9
-tenantID: tenantID
-tenantName: 'tenantName'
-domainID: default`,
 			isError: true,
-			expected: &config.Openstack{
-				Enabled:          true,
+			input: &config.Openstack{
 				IdentityEndpoint: "aaa",
-				UserName:         "user",
-				Password:         "",
-				TenantID:         "tenantID",
-				TenantName:       "tenantName",
-				DomainID:         "default",
-				Region:           "GRA9",
+				UserName:         cleanOpenstack.UserName,
+				Password:         cleanOpenstack.Password,
+				TenantID:         cleanOpenstack.TenantID,
+				TenantName:       cleanOpenstack.TenantName,
+				DomainID:         cleanOpenstack.DomainID,
+				Region:           cleanOpenstack.Region,
 			},
 			title: "Valid URL",
 		},
@@ -93,22 +58,16 @@ domainID: default`,
 
 	for _, tt := range tests {
 		suite.Run(tt.title, func() {
-			// Arrange
-			config := &config.Openstack{}
-			err := yaml.Unmarshal([]byte(tt.input), config)
-			suite.NoError(err)
-
 			// Act
-			err = config.Validate()
+			err := tt.input.Validate()
 
 			// Assert
 			if tt.isError {
-				logger.I.Debug("expected error", zap.Error(err))
+				logger.I.Info("expected error", zap.Error(err))
 				suite.Error(err)
 			} else {
 				suite.NoError(err)
 			}
-			suite.Equal(tt.expected, config)
 		})
 	}
 }

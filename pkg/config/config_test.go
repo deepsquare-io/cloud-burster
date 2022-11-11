@@ -3,7 +3,6 @@
 package config_test
 
 import (
-	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -12,63 +11,13 @@ import (
 	"github.com/squarefactory/cloud-burster/utils/projectpath"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
 )
 
-var cleanConfig = &config.Config{
+var cleanConfig = config.Config{
 	APIVersion: config.APIVersion,
 	Clouds: []config.Cloud{
-		{
-			Network: config.Network{
-				Name:       "name",
-				SubnetCIDR: "172.28.0.0/20",
-			},
-
-			Hosts: []config.Host{
-				{
-					Name:       "test.example.com",
-					DiskSize:   100,
-					FlavorName: "test-flavor",
-					ImageName:  "image",
-					IP:         "172.28.16.254",
-				},
-			},
-			GroupsHost: []config.GroupHost{
-				{
-					NamePattern: "cn-s-[1-50].example.com",
-					IPCidr:      "172.28.0.0/20",
-					HostTemplate: config.Host{
-						DiskSize:   50,
-						FlavorName: "d2-2",
-						ImageName:  "Rocky Linux 9",
-					},
-				},
-			},
-			CloudConfigTemplateOpts: config.CloudConfigTemplateOpts{
-				AuthorizedKeys: []string{
-					"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
-				},
-				DNS:    "1.1.1.1",
-				Search: "example.com",
-				PostScripts: config.PostScriptsOpts{
-					Git: config.GitOpts{
-						Key: "key",
-						URL: "git@github.com:SquareFactory/compute-configs.git",
-						Ref: "main",
-					},
-				},
-			},
-			Openstack: config.Openstack{
-				Enabled:          true,
-				IdentityEndpoint: "https://auth.cloud.ovh.net/",
-				UserName:         "user",
-				Password:         "",
-				TenantID:         "tenantID",
-				TenantName:       "tenantName",
-				DomainID:         "default",
-				Region:           "GRA9",
-			},
-		},
+		cleanOpenstackCloud,
+		cleanExoscaleCloud,
 	},
 }
 
@@ -78,211 +27,28 @@ type ConfigTestSuite struct {
 
 func (suite *ConfigTestSuite) TestValidate() {
 	tests := []struct {
-		input    string
-		expected *config.Config
-		isError  bool
-		title    string
+		input   *config.Config
+		isError bool
+		title   string
 	}{
 		{
-			input: fmt.Sprintf(`apiVersion: '%s'
-clouds:
-  - network:
-      name: 'name'
-      subnetCIDR: '172.28.0.0/20'
-    hosts:
-      - name: test.example.com
-        diskSize: 100
-        imageName: image
-        flavorName: test-flavor
-        ip: "172.28.16.254"
-    groupsHost:
-      - namePattern: cn-s-[1-50].example.com
-        ipCIDR: 172.28.0.0/20
-        template:
-          diskSize: 50
-          flavorName: 'd2-2'
-          imageName: 'Rocky Linux 9'
-    cloudConfig:
-      authorizedKeys:
-        - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4'
-      dns: 1.1.1.1
-      search: example.com
-      postScripts:
-        git:
-          key: key
-          url: git@github.com:SquareFactory/compute-configs.git
-          ref: main
-    openstack:
-      enabled: true
-      identityEndpoint: https://auth.cloud.ovh.net/
-      username: user
-      password: ''
-      region: GRA9
-      tenantID: tenantID
-      tenantName: 'tenantName'
-      domainID: default`, config.APIVersion),
-			isError:  false,
-			expected: cleanConfig,
-			title:    "Positive test",
+			isError: false,
+			input:   &cleanConfig,
+			title:   "Positive test",
 		},
 		{
-			input: `apiVersion: 'aaa'
-clouds:
-  - network:
-      name: 'name'
-      subnetCIDR: '172.28.0.0/20'
-    groupsHost:
-      - namePattern: cn-s-[1-50].example.com
-        ipCIDR: 172.28.0.0/20
-        template:
-          diskSize: 50
-          flavorName: 'd2-2'
-          imageName: 'Rocky Linux 9'
-    cloudConfig:
-      authorizedKeys:
-        - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4'
-      dns: 1.1.1.1
-      search: example.com
-      postScripts:
-        git:
-          key: key
-          url: git@github.com:SquareFactory/compute-configs.git
-          ref: main
-    openstack:
-      enabled: true
-      identityEndpoint: https://auth.cloud.ovh.net/
-      username: user
-      password: ''
-      region: GRA9
-      tenantID: tenantID
-      tenantName: 'tenantName'
-      domainID: default`,
 			isError: true,
-			expected: &config.Config{
+			input: &config.Config{
 				APIVersion: "aaa",
-				Clouds: []config.Cloud{
-					{
-						Network: config.Network{
-							Name:       "name",
-							SubnetCIDR: "172.28.0.0/20",
-						},
-						GroupsHost: []config.GroupHost{
-							{
-								NamePattern: "cn-s-[1-50].example.com",
-								IPCidr:      "172.28.0.0/20",
-								HostTemplate: config.Host{
-									DiskSize:   50,
-									FlavorName: "d2-2",
-									ImageName:  "Rocky Linux 9",
-								},
-							},
-						},
-						CloudConfigTemplateOpts: config.CloudConfigTemplateOpts{
-							AuthorizedKeys: []string{
-								"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
-							},
-							DNS:    "1.1.1.1",
-							Search: "example.com",
-							PostScripts: config.PostScriptsOpts{
-								Git: config.GitOpts{
-									Key: "key",
-									URL: "git@github.com:SquareFactory/compute-configs.git",
-									Ref: "main",
-								},
-							},
-						},
-						Openstack: config.Openstack{
-							Enabled:          true,
-							IdentityEndpoint: "https://auth.cloud.ovh.net/",
-							UserName:         "user",
-							Password:         "",
-							TenantID:         "tenantID",
-							TenantName:       "tenantName",
-							DomainID:         "default",
-							Region:           "GRA9",
-						},
-					},
-				},
 			},
 			title: "Wrong API version",
 		},
 		{
-			input: fmt.Sprintf(`apiVersion: '%s'
-clouds:
-  - network:
-      name: ''
-      subnetCIDR: '172.28.0.0/20'
-    groupsHost:
-      - namePattern: cn-s-[1-50].example.com
-        ipCIDR: 172.28.0.0/20
-        template:
-          diskSize: 50
-          flavorName: 'd2-2'
-          imageName: 'Rocky Linux 9'
-    cloudConfig:
-      authorizedKeys:
-        - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4'
-      dns: 1.1.1.1
-      search: example.com
-      postScripts:
-        git:
-          key: key
-          url: git@github.com:SquareFactory/compute-configs.git
-          ref: main
-    openstack:
-      enabled: true
-      identityEndpoint: https://auth.cloud.ovh.net/
-      username: user
-      password: ''
-      region: GRA9
-      tenantID: tenantID
-      tenantName: 'tenantName'
-      domainID: default`, config.APIVersion),
 			isError: true,
-			expected: &config.Config{
+			input: &config.Config{
 				APIVersion: config.APIVersion,
 				Clouds: []config.Cloud{
-					{
-						Network: config.Network{
-							Name:       "",
-							SubnetCIDR: "172.28.0.0/20",
-						},
-						GroupsHost: []config.GroupHost{
-							{
-								NamePattern: "cn-s-[1-50].example.com",
-								IPCidr:      "172.28.0.0/20",
-								HostTemplate: config.Host{
-									DiskSize:   50,
-									FlavorName: "d2-2",
-									ImageName:  "Rocky Linux 9",
-								},
-							},
-						},
-						CloudConfigTemplateOpts: config.CloudConfigTemplateOpts{
-							AuthorizedKeys: []string{
-								"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
-							},
-							DNS:    "1.1.1.1",
-							Search: "example.com",
-							PostScripts: config.PostScriptsOpts{
-								Git: config.GitOpts{
-									Key: "key",
-									URL: "git@github.com:SquareFactory/compute-configs.git",
-									Ref: "main",
-								},
-							},
-						},
-						Openstack: config.Openstack{
-							Enabled:          true,
-							IdentityEndpoint: "https://auth.cloud.ovh.net/",
-							UserName:         "user",
-							Password:         "",
-							TenantID:         "tenantID",
-							TenantName:       "tenantName",
-							DomainID:         "default",
-							Region:           "GRA9",
-						},
-					},
+					{},
 				},
 			},
 			title: "Valid cloud",
@@ -291,75 +57,23 @@ clouds:
 
 	for _, tt := range tests {
 		suite.Run(tt.title, func() {
-			// Arrange
-			config := &config.Config{}
-			err := yaml.Unmarshal([]byte(tt.input), config)
-			suite.NoError(err)
-
 			// Act
-			err = config.Validate()
+			err := tt.input.Validate()
 
 			// Assert
 			if tt.isError {
-				logger.I.Debug("expected error", zap.Error(err))
+				logger.I.Info("expected error", zap.Error(err))
 				suite.Error(err)
 			} else {
 				suite.NoError(err)
 			}
-			suite.Equal(tt.expected, config)
 		})
 	}
 }
 
 func (suite *ConfigTestSuite) TestParseFile() {
 	// Arrange
-	expected := &config.Config{
-		APIVersion: config.APIVersion,
-		Clouds: []config.Cloud{
-			{
-				Network: config.Network{
-					Name:       "name",
-					SubnetCIDR: "172.28.0.0/20",
-				},
-				GroupsHost: []config.GroupHost{
-					{
-						NamePattern: "cn-s-[1-50].example.com",
-						IPCidr:      "172.28.0.0/20",
-						IPOffset:    256,
-						HostTemplate: config.Host{
-							DiskSize:   50,
-							FlavorName: "d2-2",
-							ImageName:  "Rocky Linux 9",
-						},
-					},
-				},
-				CloudConfigTemplateOpts: config.CloudConfigTemplateOpts{
-					AuthorizedKeys: []string{
-						"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
-					},
-					DNS:    "1.1.1.1",
-					Search: "example.com",
-					PostScripts: config.PostScriptsOpts{
-						Git: config.GitOpts{
-							Key: "key",
-							URL: "git@github.com:SquareFactory/compute-configs.git",
-							Ref: "main",
-						},
-					},
-				},
-				Openstack: config.Openstack{
-					Enabled:          true,
-					IdentityEndpoint: "https://auth.cloud.ovh.net/",
-					UserName:         "user",
-					Password:         "",
-					TenantID:         "tenantID",
-					TenantName:       "tenantName",
-					DomainID:         "default",
-					Region:           "GRA9",
-				},
-			},
-		},
-	}
+	expected := &cleanConfig
 
 	// Act
 	config, err := config.ParseFile(filepath.Join(projectpath.Root, "config.yaml.example"))
@@ -393,7 +107,7 @@ func (suite *ConfigTestSuite) TestSearchHostByHostName() {
 				DiskSize:   cleanConfig.Clouds[0].GroupsHost[0].HostTemplate.DiskSize,
 				FlavorName: cleanConfig.Clouds[0].GroupsHost[0].HostTemplate.FlavorName,
 				ImageName:  cleanConfig.Clouds[0].GroupsHost[0].HostTemplate.ImageName,
-				IP:         "172.28.0.5",
+				IP:         "172.28.1.5",
 			},
 			title: "Search in groups host",
 		},
@@ -429,6 +143,8 @@ func (suite *ConfigTestSuite) TestGenerateHosts() {
 				Network:                 cleanConfig.Clouds[0].Network,
 				CloudConfigTemplateOpts: cleanConfig.Clouds[0].CloudConfigTemplateOpts,
 				Openstack:               cleanConfig.Clouds[0].Openstack,
+				Exoscale:                cleanConfig.Clouds[0].Exoscale,
+				Type:                    cleanConfig.Clouds[0].Type,
 				GroupsHost: []config.GroupHost{
 					{
 						NamePattern: "cn-[1-5]",

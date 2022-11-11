@@ -5,6 +5,7 @@ import (
 
 	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/config"
+	"github.com/squarefactory/cloud-burster/pkg/exoscale"
 	"github.com/squarefactory/cloud-burster/pkg/openstack"
 	"go.uber.org/zap"
 )
@@ -19,7 +20,8 @@ type DataSource interface {
 }
 
 func New(conf *config.Cloud) (DataSource, error) {
-	if conf.Openstack.Enabled {
+	switch conf.Type {
+	case "openstack":
 		return openstack.New(
 			conf.Openstack.IdentityEndpoint,
 			conf.Openstack.UserName,
@@ -28,6 +30,13 @@ func New(conf *config.Cloud) (DataSource, error) {
 			conf.Openstack.TenantName,
 			conf.Openstack.Region,
 			conf.Openstack.DomainID,
+		), nil
+	case "exoscale":
+		return exoscale.New(
+			conf.Exoscale.ComputeEndpoint,
+			conf.Exoscale.APIKey,
+			conf.Exoscale.APISecret,
+			conf.Exoscale.Zone,
 		), nil
 	}
 

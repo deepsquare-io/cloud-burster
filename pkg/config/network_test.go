@@ -9,8 +9,12 @@ import (
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
 )
+
+var cleanNetwork = config.Network{
+	Name:       "net",
+	SubnetCIDR: "172.28.0.0/20",
+}
 
 type NetworkTestSuite struct {
 	suite.Suite
@@ -18,46 +22,32 @@ type NetworkTestSuite struct {
 
 func (suite *NetworkTestSuite) TestValidate() {
 	tests := []struct {
-		input    string
-		expected *config.Network
-		isError  bool
-		title    string
+		input   *config.Network
+		isError bool
+		title   string
 	}{
 		{
-			input: `name: 'net'
-subnetCIDR: '172.24.0.0/20'`,
-			expected: &config.Network{
-				Name:       "net",
-				SubnetCIDR: "172.24.0.0/20",
-			},
+			input: &cleanNetwork,
 			title: "Positive test",
 		},
 		{
-			input: `name: ''
-subnetCIDR: '172.24.0.0/20'`,
 			isError: true,
-			expected: &config.Network{
-				Name:       "",
-				SubnetCIDR: "172.24.0.0/20",
+			input: &config.Network{
+				SubnetCIDR: cleanNetwork.SubnetCIDR,
 			},
 			title: "Required name",
 		},
 		{
-			input: `name: 'net'
-subnetCIDR: ''`,
 			isError: true,
-			expected: &config.Network{
-				Name:       "net",
-				SubnetCIDR: "",
+			input: &config.Network{
+				Name: cleanNetwork.Name,
 			},
 			title: "Required CIDR",
 		},
 		{
-			input: `name: 'net'
-subnetCIDR: 'aaa'`,
 			isError: true,
-			expected: &config.Network{
-				Name:       "net",
+			input: &config.Network{
+				Name:       cleanNetwork.Name,
 				SubnetCIDR: "aaa",
 			},
 			title: "Valid CIDR",
@@ -66,22 +56,16 @@ subnetCIDR: 'aaa'`,
 
 	for _, tt := range tests {
 		suite.Run(tt.title, func() {
-			// Arrange
-			config := &config.Network{}
-			err := yaml.Unmarshal([]byte(tt.input), config)
-			suite.NoError(err)
-
 			// Act
-			err = config.Validate()
+			err := tt.input.Validate()
 
 			// Assert
 			if tt.isError {
-				logger.I.Debug("expected error", zap.Error(err))
+				logger.I.Info("expected error", zap.Error(err))
 				suite.Error(err)
 			} else {
 				suite.NoError(err)
 			}
-			suite.Equal(tt.expected, config)
 		})
 	}
 }

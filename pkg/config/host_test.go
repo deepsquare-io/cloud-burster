@@ -9,8 +9,15 @@ import (
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
 )
+
+var cleanHost = config.Host{
+	Name:       "host",
+	DiskSize:   50,
+	FlavorName: "d2-2",
+	ImageName:  "Rocky Linux 9",
+	IP:         "172.28.16.254",
+}
 
 type HostTestSuite struct {
 	suite.Suite
@@ -18,89 +25,52 @@ type HostTestSuite struct {
 
 func (suite *HostTestSuite) TestValidate() {
 	tests := []struct {
-		input    string
-		expected *config.Host
-		isError  bool
-		title    string
+		input   *config.Host
+		isError bool
+		title   string
 	}{
 		{
-			input: `name: host
-diskSize: 50
-flavorName: flavor
-imageName: image
-ip: 172.24.0.0`,
-			expected: &config.Host{
-				Name:       "host",
-				DiskSize:   50,
-				FlavorName: "flavor",
-				ImageName:  "image",
-				IP:         "172.24.0.0",
-			},
+			input: &cleanHost,
 			title: "Positive test",
 		},
 		{
-			input: `diskSize: 50
-flavorName: flavor
-imageName: image`,
-			expected: &config.Host{
-				Name:       "",
-				DiskSize:   50,
-				FlavorName: "flavor",
-				ImageName:  "image",
-				IP:         "",
+			input: &config.Host{
+				DiskSize:   cleanHost.DiskSize,
+				FlavorName: cleanHost.FlavorName,
+				ImageName:  cleanHost.ImageName,
 			},
 			title: "Positive test without optional fields",
 		},
 		{
-			input: `flavorName: flavor
-imageName: image`,
 			isError: true,
-			expected: &config.Host{
-				Name:       "",
-				DiskSize:   0,
-				FlavorName: "flavor",
-				ImageName:  "image",
-				IP:         "",
+			input: &config.Host{
+				FlavorName: cleanHost.FlavorName,
+				ImageName:  cleanHost.ImageName,
 			},
 			title: "Required disk size",
 		},
 		{
-			input: `diskSize: 50
-imageName: image`,
 			isError: true,
-			expected: &config.Host{
-				Name:       "",
-				DiskSize:   50,
-				FlavorName: "",
-				ImageName:  "image",
-				IP:         "",
+			input: &config.Host{
+				DiskSize:  cleanHost.DiskSize,
+				ImageName: cleanHost.ImageName,
 			},
 			title: "Required flavor",
 		},
 		{
-			input: `diskSize: 50
-flavorName: flavor`,
 			isError: true,
-			expected: &config.Host{
-				Name:       "",
-				DiskSize:   50,
-				FlavorName: "flavor",
-				ImageName:  "",
-				IP:         "",
+			input: &config.Host{
+				DiskSize:   cleanHost.DiskSize,
+				FlavorName: cleanHost.FlavorName,
 			},
 			title: "Required image",
 		},
 		{
-			input: `diskSize: 50
-imageName: image
-flavorName: flavor
-ip: ip`,
 			isError: true,
-			expected: &config.Host{
-				Name:       "",
-				DiskSize:   50,
-				FlavorName: "flavor",
-				ImageName:  "image",
+			input: &config.Host{
+				DiskSize:   cleanHost.DiskSize,
+				FlavorName: cleanHost.FlavorName,
+				ImageName:  cleanHost.ImageName,
 				IP:         "ip",
 			},
 			title: "Valid IP",
@@ -109,22 +79,16 @@ ip: ip`,
 
 	for _, tt := range tests {
 		suite.Run(tt.title, func() {
-			// Arrange
-			config := &config.Host{}
-			err := yaml.Unmarshal([]byte(tt.input), config)
-			suite.NoError(err)
-
 			// Act
-			err = config.Validate()
+			err := tt.input.Validate()
 
 			// Assert
 			if tt.isError {
-				logger.I.Debug("expected error", zap.Error(err))
+				logger.I.Info("expected error", zap.Error(err))
 				suite.Error(err)
 			} else {
 				suite.NoError(err)
 			}
-			suite.Equal(tt.expected, config)
 		})
 	}
 }
