@@ -35,6 +35,16 @@ var flags = []cli.Flag{
 			return nil
 		},
 	},
+	&cli.BoolFlag{
+		Name:  "debug",
+		Value: false,
+		Action: func(ctx *cli.Context, s bool) error {
+			if s {
+				logger.EnableDebug()
+			}
+			return nil
+		},
+	},
 }
 
 var app = &cli.App{

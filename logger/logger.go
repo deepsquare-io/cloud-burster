@@ -22,5 +22,9 @@ func init() {
 		zapcore.Lock(os.Stdout),
 		atom,
 	))
+	atom.SetLevel(zap.InfoLevel)
+}
+
+func EnableDebug() {
 	atom.SetLevel(zap.DebugLevel)
 }
