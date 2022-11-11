@@ -2,6 +2,8 @@ package exoscale
 
 import (
 	"errors"
+	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -54,12 +56,123 @@ func New(
 	}
 }
 
+// FindImageID retrieves the image UUID from name
+func (s *DataSource) FindImageID(name string) (string, error) {
+	logger.I.Debug("FindImageID called", zap.String("name", name))
+	req := &egoscale.ListTemplates{
+		Name:           name,
+		TemplateFilter: "", // TODO
+		ZoneID:         s.zone.ID,
+	}
+	resp, err := s.client.Request(req)
+	if err != nil {
+		return "", err
+	}
+	templates := resp.(*egoscale.ListTemplatesResponse)
+	for _, template := range templates.Template {
+		if template.Name == name {
+			logger.I.Debug("FindImageID returned", zap.String("image", template.ID.String()))
+			return template.ID.String(), nil
+		}
+	}
+	return "", errors.New("didn't find an image")
+}
+
+// FindFlavorID retrieves the flavor UUID from name
+func (s *DataSource) FindFlavorID(name string) (string, error) {
+	logger.I.Debug("FindFlavorID called", zap.String("name", name))
+	req := &egoscale.ListServiceOfferings{
+		Name: name,
+	}
+	resp, err := s.client.Request(req)
+	if err != nil {
+		return "", err
+	}
+	serviceOfferings := resp.(*egoscale.ListServiceOfferingsResponse)
+	for _, so := range serviceOfferings.ServiceOffering {
+		if so.Name == name {
+			logger.I.Debug("FindFlavorID returned", zap.String("flavor", so.ID.String()))
+			return so.ID.String(), nil
+		}
+	}
+	return "", errors.New("didn't find a flavor")
+}
+
+// FindNetworkID retrieves the network UUID from name
+func (s *DataSource) FindNetworkID(name string) (string, error) {
+	logger.I.Debug("FindNetworkID called", zap.String("name", name))
+	req := &egoscale.ListNetworks{
+		ZoneID: s.zone.ID,
+	}
+	resp, err := s.client.Request(req)
+	if err != nil {
+		return "", err
+	}
+	networks := resp.(*egoscale.ListNetworksResponse)
+	for _, so := range networks.Network {
+		if so.Name == name {
+			logger.I.Debug("FindNetworkID returned", zap.String("network", so.ID.String()))
+			return so.ID.String(), nil
+		}
+	}
+	return "", errors.New("didn't find a network")
+}
+
+// Create an instance
 func (s *DataSource) Create(
 	host *config.Host,
-	network *config.Network,
-	cloudConfigOpts *config.CloudConfigTemplateOpts,
+	cloud *config.Cloud,
 ) error {
-	// TODO: implements
+	logger.I.Debug(
+		"Create called",
+		zap.Any("host", host),
+		zap.Any("cloud", cloud),
+	)
+	imageID, err := s.FindImageID(host.ImageName)
+	if err != nil {
+		return err
+	}
+	flavorID, err := s.FindFlavorID(host.ImageName)
+	if err != nil {
+		return err
+	}
+	networkID, err := s.FindNetworkID(cloud.Network.Name)
+	if err != nil {
+		return err
+	}
+	_, net, err := net.ParseCIDR(cloud.Network.SubnetCIDR)
+	if err != nil {
+		return err
+	}
+	mask, _ := net.Mask.Size()
+	userData, err := GenerateCloudConfig(&CloudConfigOpts{
+		AuthorizedKeys: cloud.AuthorizedKeys,
+		PostScripts:    cloud.PostScripts,
+		DNS:            cloud.Network.DNS,
+		Search:         cloud.Network.Search,
+		AddressCIDR:    fmt.Sprintf("%s/%d", host.IP, mask),
+		Gateway:        cloud.Network.Gateway,
+	})
+	if err != nil {
+		return err
+	}
+	req := &egoscale.DeployVirtualMachine{
+		Name:              host.Name,
+		TemplateID:        egoscale.MustParseUUID(imageID),
+		ServiceOfferingID: egoscale.MustParseUUID(flavorID),
+		RootDiskSize:      int64(host.DiskSize),
+		ZoneID:            s.zone.ID,
+		UserData:          userData,
+		NetworkIDs: []egoscale.UUID{
+			*egoscale.MustParseUUID(networkID),
+		},
+	}
+	resp, err := s.client.Request(req)
+	if err != nil {
+		return err
+	}
+	vm := resp.(*egoscale.VirtualMachine)
+	logger.I.Info("spawned a server", zap.Any("server", vm))
 	return nil
 }
 
@@ -80,7 +193,7 @@ func (s *DataSource) FindServer(name string) (egoscale.VirtualMachine, error) {
 			return vm, nil
 		}
 	}
-	return egoscale.VirtualMachine{}, errors.New("server not found")
+	return egoscale.VirtualMachine{}, errors.New("didn't find a server")
 }
 
 func (s *DataSource) Delete(name string) error {

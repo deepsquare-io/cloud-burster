@@ -5,10 +5,8 @@ package config_test
 import (
 	"testing"
 
-	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 )
 
 var cleanGroupHost = config.GroupHost{
@@ -28,9 +26,10 @@ type GroupHostTestSuite struct {
 
 func (suite *GroupHostTestSuite) TestValidate() {
 	tests := []struct {
-		input   *config.GroupHost
-		isError bool
-		title   string
+		input         *config.GroupHost
+		isError       bool
+		errorContains []string
+		title         string
 	}{
 		{
 			input: &cleanGroupHost,
@@ -38,8 +37,11 @@ func (suite *GroupHostTestSuite) TestValidate() {
 		},
 		{
 			isError: true,
+			errorContains: []string{
+				"required",
+				"NamePattern",
+			},
 			input: &config.GroupHost{
-				NamePattern:  "",
 				IPCidr:       cleanGroupHost.IPCidr,
 				IPOffset:     cleanGroupHost.IPOffset,
 				HostTemplate: cleanGroupHost.HostTemplate,
@@ -48,9 +50,12 @@ func (suite *GroupHostTestSuite) TestValidate() {
 		},
 		{
 			isError: true,
+			errorContains: []string{
+				"required",
+				"IPCidr",
+			},
 			input: &config.GroupHost{
 				NamePattern:  cleanGroupHost.NamePattern,
-				IPCidr:       "",
 				IPOffset:     cleanGroupHost.IPOffset,
 				HostTemplate: cleanGroupHost.HostTemplate,
 			},
@@ -58,6 +63,10 @@ func (suite *GroupHostTestSuite) TestValidate() {
 		},
 		{
 			isError: true,
+			errorContains: []string{
+				"cidr",
+				"IPCidr",
+			},
 			input: &config.GroupHost{
 				NamePattern:  cleanGroupHost.NamePattern,
 				IPCidr:       "172.24.0.0",
@@ -68,6 +77,9 @@ func (suite *GroupHostTestSuite) TestValidate() {
 		},
 		{
 			isError: true,
+			errorContains: []string{
+				"HostTemplate",
+			},
 			input: &config.GroupHost{
 				NamePattern:  cleanGroupHost.NamePattern,
 				IPCidr:       cleanGroupHost.IPCidr,
@@ -85,8 +97,10 @@ func (suite *GroupHostTestSuite) TestValidate() {
 
 			// Assert
 			if tt.isError {
-				logger.I.Info("expected error", zap.Error(err))
 				suite.Error(err)
+				for _, contain := range tt.errorContains {
+					suite.ErrorContains(err, contain)
+				}
 			} else {
 				suite.NoError(err)
 			}
@@ -101,10 +115,11 @@ func (suite *GroupHostTestSuite) TestGenerateHosts() {
 		ImageName:  "image",
 	}
 	tests := []struct {
-		input    config.GroupHost
-		expected []config.Host
-		isError  bool
-		title    string
+		input         config.GroupHost
+		expected      []config.Host
+		isError       bool
+		errorContains []string
+		title         string
 	}{
 		{
 			input: config.GroupHost{
@@ -113,7 +128,6 @@ func (suite *GroupHostTestSuite) TestGenerateHosts() {
 				IPOffset:     5,
 				HostTemplate: hostTemplate,
 			},
-			isError: false,
 			expected: []config.Host{
 				{
 					Name:       "cn1",
@@ -159,7 +173,10 @@ func (suite *GroupHostTestSuite) TestGenerateHosts() {
 				IPCidr:       "172.20.0.0/24",
 				HostTemplate: hostTemplate,
 			},
-			isError:  true,
+			isError: true,
+			errorContains: []string{
+				"not enough IP",
+			},
 			expected: []config.Host{},
 			title:    "Not enough IP",
 		},
@@ -172,8 +189,10 @@ func (suite *GroupHostTestSuite) TestGenerateHosts() {
 
 			// Assert
 			if tt.isError {
-				logger.I.Info("expected error", zap.Error(err))
 				suite.Error(err)
+				for _, contain := range tt.errorContains {
+					suite.ErrorContains(err, contain)
+				}
 			} else {
 				suite.NoError(err)
 			}

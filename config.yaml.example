@@ -4,6 +4,9 @@ clouds:
     network:
       name: 'net'
       subnetCIDR: '172.28.0.0/20'
+      dns: 1.1.1.1
+      search: example.com
+      gateway: 172.28.0.2
     hosts:
       - name: 'host'
         diskSize: 50
@@ -18,16 +21,13 @@ clouds:
           diskSize: 50
           flavorName: 'd2-2'
           imageName: 'Rocky Linux 9'
-    cloudConfig:
-      authorizedKeys:
-        - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4'
-      dns: 1.1.1.1
-      search: example.com
-      postScripts:
-        git:
-          key: key
-          url: git@github.com:SquareFactory/compute-configs.git
-          ref: main
+    authorizedKeys:
+      - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4'
+    postScripts:
+      git:
+        key: key
+        url: git@github.com:SquareFactory/compute-configs.git
+        ref: main
     openstack:
       # If you have the openrc.sh file, this corresponds to:
       # identityEndpoint: OS_AUTH_URL
@@ -48,6 +48,9 @@ clouds:
     network:
       name: 'net'
       subnetCIDR: '172.28.0.0/20'
+      dns: 1.1.1.1
+      search: example.com
+      gateway: 172.28.0.2
     hosts:
       - name: 'host'
         diskSize: 50
@@ -62,18 +65,15 @@ clouds:
           diskSize: 50
           flavorName: 'd2-2'
           imageName: 'Rocky Linux 9'
-    cloudConfig:
-      authorizedKeys:
-        - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4'
-      dns: 1.1.1.1
-      search: example.com
-      postScripts:
-        git:
-          key: key
-          url: git@github.com:SquareFactory/compute-configs.git
-          ref: main
+    authorizedKeys:
+      - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4'
+    postScripts:
+      git:
+        key: key
+        url: git@github.com:SquareFactory/compute-configs.git
+        ref: main
     exoscale:
-      computeEndpoint: https://api.exoscale.com/compute/
+      computeEndpoint: https://api.exoscale.com/v1
       apiKey: key
       apiSecret: secret
       zone: zone

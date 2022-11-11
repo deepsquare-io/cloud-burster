@@ -5,14 +5,12 @@ package config_test
 import (
 	"testing"
 
-	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 )
 
 var cleanExoscale = config.Exoscale{
-	ComputeEndpoint: "https://api.exoscale.com/compute/",
+	ComputeEndpoint: "https://api.exoscale.com/v1",
 	APIKey:          "key",
 	APISecret:       "secret",
 	Zone:            "zone",
@@ -24,22 +22,25 @@ type ExoscaleTestSuite struct {
 
 func (suite *ExoscaleTestSuite) TestValidate() {
 	tests := []struct {
-		input   *config.Exoscale
-		isError bool
-		title   string
+		input         *config.Exoscale
+		isError       bool
+		errorContains []string
+		title         string
 	}{
 		{
-			isError: false,
-			input:   &cleanExoscale,
-			title:   "Positive test",
+			input: &cleanExoscale,
+			title: "Positive test",
 		},
 		{
-			isError: false,
-			input:   &config.Exoscale{},
-			title:   "Positive test: Empty fields",
+			input: &config.Exoscale{},
+			title: "Positive test: Empty fields",
 		},
 		{
 			isError: true,
+			errorContains: []string{
+				"url",
+				"ComputeEndpoint",
+			},
 			input: &config.Exoscale{
 				ComputeEndpoint: "aaa",
 				APIKey:          cleanExoscale.APIKey,
@@ -57,8 +58,10 @@ func (suite *ExoscaleTestSuite) TestValidate() {
 
 			// Assert
 			if tt.isError {
-				logger.I.Info("expected error", zap.Error(err))
 				suite.Error(err)
+				for _, contain := range tt.errorContains {
+					suite.ErrorContains(err, contain)
+				}
 			} else {
 				suite.NoError(err)
 			}

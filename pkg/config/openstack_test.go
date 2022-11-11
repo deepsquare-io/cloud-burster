@@ -5,10 +5,8 @@ package config_test
 import (
 	"testing"
 
-	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 )
 
 var cleanOpenstack = config.Openstack{
@@ -27,22 +25,25 @@ type OpenstackTestSuite struct {
 
 func (suite *OpenstackTestSuite) TestValidate() {
 	tests := []struct {
-		input   *config.Openstack
-		isError bool
-		title   string
+		input         *config.Openstack
+		isError       bool
+		errorContains []string
+		title         string
 	}{
 		{
-			isError: false,
-			input:   &cleanOpenstack,
-			title:   "Positive test",
+			input: &cleanOpenstack,
+			title: "Positive test",
 		},
 		{
-			isError: false,
-			input:   &config.Openstack{},
-			title:   "Positive test: Empty fields",
+			input: &config.Openstack{},
+			title: "Positive test: Empty fields",
 		},
 		{
 			isError: true,
+			errorContains: []string{
+				"url",
+				"IdentityEndpoint",
+			},
 			input: &config.Openstack{
 				IdentityEndpoint: "aaa",
 				UserName:         cleanOpenstack.UserName,
@@ -63,8 +64,10 @@ func (suite *OpenstackTestSuite) TestValidate() {
 
 			// Assert
 			if tt.isError {
-				logger.I.Info("expected error", zap.Error(err))
 				suite.Error(err)
+				for _, contain := range tt.errorContains {
+					suite.ErrorContains(err, contain)
+				}
 			} else {
 				suite.NoError(err)
 			}

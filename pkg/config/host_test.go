@@ -5,10 +5,8 @@ package config_test
 import (
 	"testing"
 
-	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 )
 
 var cleanHost = config.Host{
@@ -25,9 +23,10 @@ type HostTestSuite struct {
 
 func (suite *HostTestSuite) TestValidate() {
 	tests := []struct {
-		input   *config.Host
-		isError bool
-		title   string
+		input         *config.Host
+		isError       bool
+		errorContains []string
+		title         string
 	}{
 		{
 			input: &cleanHost,
@@ -43,6 +42,10 @@ func (suite *HostTestSuite) TestValidate() {
 		},
 		{
 			isError: true,
+			errorContains: []string{
+				"required",
+				"DiskSize",
+			},
 			input: &config.Host{
 				FlavorName: cleanHost.FlavorName,
 				ImageName:  cleanHost.ImageName,
@@ -51,6 +54,10 @@ func (suite *HostTestSuite) TestValidate() {
 		},
 		{
 			isError: true,
+			errorContains: []string{
+				"required",
+				"FlavorName",
+			},
 			input: &config.Host{
 				DiskSize:  cleanHost.DiskSize,
 				ImageName: cleanHost.ImageName,
@@ -59,6 +66,10 @@ func (suite *HostTestSuite) TestValidate() {
 		},
 		{
 			isError: true,
+			errorContains: []string{
+				"required",
+				"ImageName",
+			},
 			input: &config.Host{
 				DiskSize:   cleanHost.DiskSize,
 				FlavorName: cleanHost.FlavorName,
@@ -67,6 +78,10 @@ func (suite *HostTestSuite) TestValidate() {
 		},
 		{
 			isError: true,
+			errorContains: []string{
+				"ip",
+				"IP",
+			},
 			input: &config.Host{
 				DiskSize:   cleanHost.DiskSize,
 				FlavorName: cleanHost.FlavorName,
@@ -84,8 +99,10 @@ func (suite *HostTestSuite) TestValidate() {
 
 			// Assert
 			if tt.isError {
-				logger.I.Info("expected error", zap.Error(err))
 				suite.Error(err)
+				for _, contain := range tt.errorContains {
+					suite.ErrorContains(err, contain)
+				}
 			} else {
 				suite.NoError(err)
 			}

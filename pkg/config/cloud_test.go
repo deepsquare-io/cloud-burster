@@ -5,13 +5,21 @@ package config_test
 import (
 	"testing"
 
-	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 )
 
 var cleanOpenstackCloud = config.Cloud{
+	AuthorizedKeys: []string{
+		"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
+	},
+	PostScripts: config.PostScriptsOpts{
+		Git: config.GitOpts{
+			Key: "key",
+			URL: "git@github.com:SquareFactory/compute-configs.git",
+			Ref: "main",
+		},
+	},
 	Network: cleanNetwork,
 	Hosts: []config.Host{
 		cleanHost,
@@ -19,12 +27,21 @@ var cleanOpenstackCloud = config.Cloud{
 	GroupsHost: []config.GroupHost{
 		cleanGroupHost,
 	},
-	Type:                    "openstack",
-	CloudConfigTemplateOpts: cleanCloudConfigTemplateOpts,
-	Openstack:               &cleanOpenstack,
+	Type:      "openstack",
+	Openstack: &cleanOpenstack,
 }
 
 var cleanExoscaleCloud = config.Cloud{
+	AuthorizedKeys: []string{
+		"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
+	},
+	PostScripts: config.PostScriptsOpts{
+		Git: config.GitOpts{
+			Key: "key",
+			URL: "git@github.com:SquareFactory/compute-configs.git",
+			Ref: "main",
+		},
+	},
 	Network: cleanNetwork,
 	Hosts: []config.Host{
 		cleanHost,
@@ -32,9 +49,8 @@ var cleanExoscaleCloud = config.Cloud{
 	GroupsHost: []config.GroupHost{
 		cleanGroupHost,
 	},
-	Type:                    "exoscale",
-	CloudConfigTemplateOpts: cleanCloudConfigTemplateOpts,
-	Exoscale:                &cleanExoscale,
+	Type:     "exoscale",
+	Exoscale: &cleanExoscale,
 }
 
 type CloudTestSuite struct {
@@ -43,55 +59,58 @@ type CloudTestSuite struct {
 
 func (suite *CloudTestSuite) TestValidate() {
 	tests := []struct {
-		input   *config.Cloud
-		isError bool
-		title   string
+		input         *config.Cloud
+		isError       bool
+		errorContains []string
+		title         string
 	}{
 		{
-			isError: false,
-			input:   &cleanOpenstackCloud,
+			input: &cleanOpenstackCloud,
+			title: "Positive test",
 		},
 		{
 			isError: true,
+			errorContains: []string{
+				"required",
+				"Network",
+			},
 			input: &config.Cloud{
-				GroupsHost:              cleanOpenstackCloud.GroupsHost,
-				CloudConfigTemplateOpts: cleanOpenstackCloud.CloudConfigTemplateOpts,
-				Openstack:               cleanOpenstackCloud.Openstack,
-				Type:                    cleanOpenstackCloud.Type,
+				AuthorizedKeys: cleanOpenstackCloud.AuthorizedKeys,
+				PostScripts:    cleanOpenstackCloud.PostScripts,
+				GroupsHost:     cleanOpenstackCloud.GroupsHost,
+				Openstack:      cleanOpenstackCloud.Openstack,
+				Type:           cleanOpenstackCloud.Type,
 			},
 			title: "Network required/valid",
 		},
 		{
 			isError: true,
+			errorContains: []string{
+				"GroupsHost",
+			},
 			input: &config.Cloud{
-				Network: cleanOpenstackCloud.Network,
+				AuthorizedKeys: cleanOpenstackCloud.AuthorizedKeys,
+				PostScripts:    cleanOpenstackCloud.PostScripts,
+				Network:        cleanOpenstackCloud.Network,
 				GroupsHost: []config.GroupHost{
 					{},
 				},
-				CloudConfigTemplateOpts: cleanOpenstackCloud.CloudConfigTemplateOpts,
-				Openstack:               cleanOpenstackCloud.Openstack,
-				Type:                    cleanOpenstackCloud.Type,
+				Openstack: cleanOpenstackCloud.Openstack,
+				Type:      cleanOpenstackCloud.Type,
 			},
 			title: "GroupsHost valid",
 		},
 		{
 			isError: true,
-			input: &config.Cloud{
-				Network:                 cleanOpenstackCloud.Network,
-				GroupsHost:              cleanOpenstackCloud.GroupsHost,
-				CloudConfigTemplateOpts: config.CloudConfigTemplateOpts{},
-				Openstack:               cleanOpenstackCloud.Openstack,
-				Type:                    cleanOpenstackCloud.Type,
+			errorContains: []string{
+				"Openstack",
 			},
-			title: "cloudConfig valid",
-		},
-		{
-			isError: true,
 			input: &config.Cloud{
-				Network:                 cleanOpenstackCloud.Network,
-				GroupsHost:              cleanOpenstackCloud.GroupsHost,
-				CloudConfigTemplateOpts: cleanOpenstackCloud.CloudConfigTemplateOpts,
-				Type:                    cleanOpenstackCloud.Type,
+				AuthorizedKeys: cleanOpenstackCloud.AuthorizedKeys,
+				PostScripts:    cleanOpenstackCloud.PostScripts,
+				Network:        cleanOpenstackCloud.Network,
+				GroupsHost:     cleanOpenstackCloud.GroupsHost,
+				Type:           cleanOpenstackCloud.Type,
 				Openstack: &config.Openstack{
 					IdentityEndpoint: "aaa",
 				},
@@ -100,21 +119,31 @@ func (suite *CloudTestSuite) TestValidate() {
 		},
 		{
 			isError: true,
+			errorContains: []string{
+				"required_if",
+				"Openstack",
+			},
 			input: &config.Cloud{
-				Network:                 cleanOpenstackCloud.Network,
-				GroupsHost:              cleanOpenstackCloud.GroupsHost,
-				CloudConfigTemplateOpts: cleanOpenstackCloud.CloudConfigTemplateOpts,
-				Type:                    "openstack",
+				AuthorizedKeys: cleanOpenstackCloud.AuthorizedKeys,
+				PostScripts:    cleanOpenstackCloud.PostScripts,
+				Network:        cleanOpenstackCloud.Network,
+				GroupsHost:     cleanOpenstackCloud.GroupsHost,
+				Type:           "openstack",
 			},
 			title: "If type == openstack, openstack is required",
 		},
 		{
 			isError: true,
+			errorContains: []string{
+				"required_if",
+				"Exoscale",
+			},
 			input: &config.Cloud{
-				Network:                 cleanOpenstackCloud.Network,
-				GroupsHost:              cleanOpenstackCloud.GroupsHost,
-				CloudConfigTemplateOpts: cleanOpenstackCloud.CloudConfigTemplateOpts,
-				Type:                    "exoscale",
+				AuthorizedKeys: cleanOpenstackCloud.AuthorizedKeys,
+				PostScripts:    cleanOpenstackCloud.PostScripts,
+				Network:        cleanOpenstackCloud.Network,
+				GroupsHost:     cleanOpenstackCloud.GroupsHost,
+				Type:           "exoscale",
 			},
 			title: "If type == exoscale, exoscale is required",
 		},
@@ -127,8 +156,10 @@ func (suite *CloudTestSuite) TestValidate() {
 
 			// Assert
 			if tt.isError {
-				logger.I.Info("expected error", zap.Error(err))
 				suite.Error(err)
+				for _, contain := range tt.errorContains {
+					suite.ErrorContains(err, contain)
+				}
 			} else {
 				suite.NoError(err)
 			}

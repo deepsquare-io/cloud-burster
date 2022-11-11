@@ -1,4 +1,4 @@
-package openstack
+package exoscale
 
 import (
 	"bytes"
@@ -10,8 +10,11 @@ import (
 type CloudConfigOpts struct {
 	AuthorizedKeys []string
 	PostScripts    config.PostScriptsOpts
-	DNS            string
-	Search         string
+	// AddressCIDR follows the format <ip>/<mask>
+	AddressCIDR string
+	Gateway     string
+	DNS         string
+	Search      string
 }
 
 const cloudConfigTemplate = `#cloud-config
@@ -55,6 +58,15 @@ runcmd:
   - [ systemctl, restart, NetworkManager ]
   - [ systemctl, stop, firewalld ]
   - [ systemctl, disable, firewalld ]
+  - [ nmcli, connection, modify, "Wired connection 1", connection.autoconnect, "yes" ]
+  - [ nmcli, connection, modify, "Wired connection 1", ipv4.addresses, "{{ .AddressCIDR }}" ]
+  - [ nmcli, connection, modify, "Wired connection 1", ipv4.gateway, "{{ .Gateway }}" ]
+  - [ nmcli, connection, modify, "Wired connection 1", ipv4.route-metric, "1" ]
+  - [ nmcli, connection, modify, "Wired connection 1", ipv4.never-default, "no" ]
+  - [ nmcli, connection, modify, "Wired connection 1", ipv4.method, manual ]
+  - [ nmcli, connection, up, "Wired connection 1" ]
+  - [ nmcli, connection, down, "System ens3" ]
+  - [ nmcli, connection, modify, "System ens3", connection.autoconnect, "no" ]
   - [ sed, "-i", "-e", 's/SELINUX=enforcing/SELINUX=disabled/g', /etc/selinux/config]
   - [ setenforce, "0" ]
 {{- if and .PostScripts.Git.URL .PostScripts.Git.Ref }}

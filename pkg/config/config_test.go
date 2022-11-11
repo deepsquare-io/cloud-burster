@@ -6,11 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/squarefactory/cloud-burster/utils/projectpath"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 )
 
 var cleanConfig = config.Config{
@@ -27,17 +25,21 @@ type ConfigTestSuite struct {
 
 func (suite *ConfigTestSuite) TestValidate() {
 	tests := []struct {
-		input   *config.Config
-		isError bool
-		title   string
+		input         *config.Config
+		isError       bool
+		errorContains []string
+		title         string
 	}{
 		{
-			isError: false,
-			input:   &cleanConfig,
-			title:   "Positive test",
+			input: &cleanConfig,
+			title: "Positive test",
 		},
 		{
 			isError: true,
+			errorContains: []string{
+				"APIVersion",
+				"equalAPI",
+			},
 			input: &config.Config{
 				APIVersion: "aaa",
 			},
@@ -45,6 +47,9 @@ func (suite *ConfigTestSuite) TestValidate() {
 		},
 		{
 			isError: true,
+			errorContains: []string{
+				"Cloud",
+			},
 			input: &config.Config{
 				APIVersion: config.APIVersion,
 				Clouds: []config.Cloud{
@@ -62,8 +67,10 @@ func (suite *ConfigTestSuite) TestValidate() {
 
 			// Assert
 			if tt.isError {
-				logger.I.Info("expected error", zap.Error(err))
 				suite.Error(err)
+				for _, contain := range tt.errorContains {
+					suite.ErrorContains(err, contain)
+				}
 			} else {
 				suite.NoError(err)
 			}
@@ -95,12 +102,10 @@ func (suite *ConfigTestSuite) TestSearchHostByHostName() {
 		input         string
 		expectedHost  *config.Host
 		expectedCloud *config.Cloud
-		isError       bool
 		title         string
 	}{
 		{
 			input:         "cn-s-5.example.com",
-			isError:       false,
 			expectedCloud: &cleanConfig.Clouds[0],
 			expectedHost: &config.Host{
 				Name:       "cn-s-5.example.com",
@@ -113,7 +118,6 @@ func (suite *ConfigTestSuite) TestSearchHostByHostName() {
 		},
 		{
 			input:         cleanConfig.Clouds[0].Hosts[0].Name,
-			isError:       false,
 			expectedCloud: &cleanConfig.Clouds[0],
 			expectedHost:  &cleanConfig.Clouds[0].Hosts[0],
 			title:         "Search in hosts",
@@ -140,11 +144,12 @@ func (suite *ConfigTestSuite) TestGenerateHosts() {
 		APIVersion: config.APIVersion,
 		Clouds: []config.Cloud{
 			{
-				Network:                 cleanConfig.Clouds[0].Network,
-				CloudConfigTemplateOpts: cleanConfig.Clouds[0].CloudConfigTemplateOpts,
-				Openstack:               cleanConfig.Clouds[0].Openstack,
-				Exoscale:                cleanConfig.Clouds[0].Exoscale,
-				Type:                    cleanConfig.Clouds[0].Type,
+				AuthorizedKeys: cleanConfig.Clouds[0].AuthorizedKeys,
+				PostScripts:    cleanConfig.Clouds[0].PostScripts,
+				Network:        cleanConfig.Clouds[0].Network,
+				Openstack:      cleanConfig.Clouds[0].Openstack,
+				Exoscale:       cleanConfig.Clouds[0].Exoscale,
+				Type:           cleanConfig.Clouds[0].Type,
 				GroupsHost: []config.GroupHost{
 					{
 						NamePattern: "cn-[1-5]",

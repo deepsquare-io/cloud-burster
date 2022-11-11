@@ -1,13 +1,13 @@
 //go:build unit
 
-package openstack_test
+package exoscale_test
 
 import (
 	"testing"
 
 	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/config"
-	"github.com/squarefactory/cloud-burster/pkg/openstack"
+	"github.com/squarefactory/cloud-burster/pkg/exoscale"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -17,7 +17,7 @@ type CloudConfigTestSuite struct {
 
 func (suite *CloudConfigTestSuite) TestGenerateCloudConfig() {
 	// Arrange
-	opts := openstack.CloudConfigOpts{
+	opts := exoscale.CloudConfigOpts{
 		AuthorizedKeys: []string{
 			"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
 		},
@@ -30,6 +30,8 @@ func (suite *CloudConfigTestSuite) TestGenerateCloudConfig() {
 				Ref: "ref",
 			},
 		},
+		AddressCIDR: "172.28.0.1/20",
+		Gateway:     "172.28.0.2",
 	}
 	expected := `#cloud-config
 disable_root: false
@@ -66,6 +68,15 @@ runcmd:
   - [ systemctl, restart, NetworkManager ]
   - [ systemctl, stop, firewalld ]
   - [ systemctl, disable, firewalld ]
+  - [ nmcli, connection, modify, "Wired connection 1", connection.autoconnect, "yes" ]
+  - [ nmcli, connection, modify, "Wired connection 1", ipv4.addresses, "172.28.0.1/20" ]
+  - [ nmcli, connection, modify, "Wired connection 1", ipv4.gateway, "172.28.0.2" ]
+  - [ nmcli, connection, modify, "Wired connection 1", ipv4.route-metric, "1" ]
+  - [ nmcli, connection, modify, "Wired connection 1", ipv4.never-default, "no" ]
+  - [ nmcli, connection, modify, "Wired connection 1", ipv4.method, manual ]
+  - [ nmcli, connection, up, "Wired connection 1" ]
+  - [ nmcli, connection, down, "System ens3" ]
+  - [ nmcli, connection, modify, "System ens3", connection.autoconnect, "no" ]
   - [ sed, "-i", "-e", 's/SELINUX=enforcing/SELINUX=disabled/g', /etc/selinux/config]
   - [ setenforce, "0" ]
 
@@ -78,7 +89,7 @@ runcmd:
 
 `
 
-	res, err := openstack.GenerateCloudConfig(&opts)
+	res, err := exoscale.GenerateCloudConfig(&opts)
 	suite.NoError(err)
 	suite.Equal(expected, res)
 	logger.I.Debug(res)

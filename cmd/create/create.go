@@ -64,13 +64,12 @@ var Command = &cli.Command{
 					return
 				}
 
-				if err := cloudWorker.Create(host, &cl.Network, &cl.CloudConfigTemplateOpts); err != nil {
+				if err := cloudWorker.Create(host, cl); err != nil {
 					logger.I.Warn(
 						"couldn't create the host",
 						zap.Error(err),
 						zap.Any("host", host),
-						zap.Any("network", cl.Network),
-						zap.Any("cloudConfig", cl.CloudConfigTemplateOpts),
+						zap.Any("cloud", cl),
 					)
 					errChan <- err
 					return

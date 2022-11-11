@@ -198,6 +198,7 @@ func (s *DataSource) FindSubnetIDByNetwork(cidr string, networkID string) (strin
 	return result.ID, nil
 }
 
+// CreatePort connected to a network
 func (s *DataSource) CreatePort(ip string, networkID string, subnetID string) (string, error) {
 	adminStateUp := true
 	port, err := ports.Create(s.networkClient, ports.CreateOpts{
@@ -218,6 +219,7 @@ func (s *DataSource) CreatePort(ip string, networkID string, subnetID string) (s
 	return port.ID, nil
 }
 
+// FindPortByDeviceID retrieves the port UUID attached to an instance
 func (s *DataSource) FindPortByDeviceID(deviceID string) (string, error) {
 	logger.I.Debug("FindPortByDeviceID called", zap.Any("deviceID", deviceID))
 	pager := ports.List(s.networkClient, ports.ListOpts{
@@ -255,12 +257,16 @@ func (s *DataSource) DeletePort(id string) error {
 	return ports.Delete(s.networkClient, id).ExtractErr()
 }
 
+// Create an instance
 func (s *DataSource) Create(
 	host *config.Host,
-	network *config.Network,
-	cloudConfigOpts *config.CloudConfigTemplateOpts,
+	cloud *config.Cloud,
 ) error {
-	logger.I.Debug("Create called", zap.Any("host", host))
+	logger.I.Debug(
+		"Create called",
+		zap.Any("host", host),
+		zap.Any("cloud", cloud),
+	)
 	image, err := s.FindImageID(host.ImageName)
 	if err != nil {
 		return err
@@ -269,11 +275,11 @@ func (s *DataSource) Create(
 	if err != nil {
 		return err
 	}
-	networkID, err := s.FindNetworkID(network.Name)
+	networkID, err := s.FindNetworkID(cloud.Network.Name)
 	if err != nil {
 		return err
 	}
-	subnetID, err := s.FindSubnetIDByNetwork(network.SubnetCIDR, networkID)
+	subnetID, err := s.FindSubnetIDByNetwork(cloud.Network.SubnetCIDR, networkID)
 	if err != nil {
 		return err
 	}
@@ -282,7 +288,12 @@ func (s *DataSource) Create(
 		return err
 	}
 	configDrive := true
-	userData, err := GenerateCloudConfig(cloudConfigOpts)
+	userData, err := GenerateCloudConfig(&CloudConfigOpts{
+		AuthorizedKeys: cloud.AuthorizedKeys,
+		PostScripts:    cloud.PostScripts,
+		DNS:            cloud.Network.DNS,
+		Search:         cloud.Network.Search,
+	})
 	if err != nil {
 		return err
 	}
@@ -320,6 +331,7 @@ func (s *DataSource) Create(
 	return nil
 }
 
+// FindServerID retrieves the instance UUID by name
 func (s *DataSource) FindServerID(name string) (string, error) {
 	logger.I.Debug("FindServerID called", zap.String("name", name))
 	pager := servers.List(s.computeClient, servers.ListOpts{

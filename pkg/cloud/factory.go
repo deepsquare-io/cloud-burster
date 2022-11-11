@@ -13,8 +13,7 @@ import (
 type DataSource interface {
 	Create(
 		host *config.Host,
-		network *config.Network,
-		cloudConfigOpts *config.CloudConfigTemplateOpts,
+		cloud *config.Cloud,
 	) error
 	Delete(name string) error
 }

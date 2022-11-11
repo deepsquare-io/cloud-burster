@@ -13,28 +13,25 @@ import (
 )
 
 var (
-	image      = "Ubuntu 22.04"
-	flavor     = "s1-2"
-	network    = "cf-net"
-	subnetCIDR = "172.28.0.0/20"
-	ip         = "172.28.1.254"
-
-	hostConfig = config.Host{
+	host = config.Host{
 		Name:       "delete-me-integration-test",
 		DiskSize:   5,
-		FlavorName: flavor,
-		ImageName:  image,
+		FlavorName: "s1-2",
+		ImageName:  "Rocky Linux 9",
 		IP:         "172.28.1.254",
 	}
-	networkConfig = config.Network{
-		Name:       network,
-		SubnetCIDR: subnetCIDR,
-	}
-	cloudConfig = config.CloudConfigTemplateOpts{
+
+	cloud = config.Cloud{
+		Network: config.Network{
+			Name:       "cf-net",
+			SubnetCIDR: "172.28.0.0/20",
+			DNS:        "1.1.1.1",
+			Gateway:    "172.28.0.2",
+		},
 		AuthorizedKeys: []string{
 			"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
 		},
-		DNS: "1.1.1.1",
+		Hosts: []config.Host{host},
 	}
 )
 
@@ -52,7 +49,7 @@ type DataSourceTestSuite struct {
 
 func (suite *DataSourceTestSuite) TestFindImageID() {
 	// Act
-	res, err := suite.impl.FindImageID(image)
+	res, err := suite.impl.FindImageID(host.ImageName)
 
 	// Assert
 	suite.NoError(err)
@@ -61,7 +58,7 @@ func (suite *DataSourceTestSuite) TestFindImageID() {
 
 func (suite *DataSourceTestSuite) TestFindFlavorID() {
 	// Act
-	res, err := suite.impl.FindFlavorID(flavor)
+	res, err := suite.impl.FindFlavorID(host.FlavorName)
 
 	// Assert
 	suite.NoError(err)
@@ -70,7 +67,7 @@ func (suite *DataSourceTestSuite) TestFindFlavorID() {
 
 func (suite *DataSourceTestSuite) TestFindNetworkID() {
 	// Act
-	image, err := suite.impl.FindNetworkID(network)
+	image, err := suite.impl.FindNetworkID(cloud.Network.Name)
 
 	// Assert
 	suite.NoError(err)
@@ -79,14 +76,14 @@ func (suite *DataSourceTestSuite) TestFindNetworkID() {
 
 func (suite *DataSourceTestSuite) TestFindSubnetIDByNetwork() {
 	// Arrange
-	networkID, err := suite.impl.FindNetworkID(network)
+	networkID, err := suite.impl.FindNetworkID(cloud.Network.Name)
 
 	// Assert
 	suite.NoError(err)
 	suite.NotEmpty(networkID)
 
 	// Act
-	res, err := suite.impl.FindSubnetIDByNetwork(subnetCIDR, networkID)
+	res, err := suite.impl.FindSubnetIDByNetwork(cloud.Network.SubnetCIDR, networkID)
 
 	// Assert
 	suite.NoError(err)
@@ -95,14 +92,14 @@ func (suite *DataSourceTestSuite) TestFindSubnetIDByNetwork() {
 
 func (suite *DataSourceTestSuite) TestCreatePort() {
 	// Arrange
-	networkID, err := suite.impl.FindNetworkID(network)
+	networkID, err := suite.impl.FindNetworkID(cloud.Network.Name)
 	suite.NoError(err)
 	suite.NotEmpty(networkID)
-	subnetID, err := suite.impl.FindSubnetIDByNetwork(subnetCIDR, networkID)
+	subnetID, err := suite.impl.FindSubnetIDByNetwork(cloud.Network.SubnetCIDR, networkID)
 	suite.NoError(err)
 	suite.NotEmpty(subnetID)
 
-	res, err := suite.impl.CreatePort(ip, networkID, subnetID)
+	res, err := suite.impl.CreatePort(host.IP, networkID, subnetID)
 
 	// Assert
 	suite.NoError(err)
@@ -121,17 +118,13 @@ func (suite *DataSourceTestSuite) TestCreatePort() {
 
 func (suite *DataSourceTestSuite) TestCreate() {
 	// Act
-	err := suite.impl.Create(
-		hostConfig,
-		networkConfig,
-		cloudConfig,
-	)
+	err := suite.impl.Create(&host, &cloud)
 
 	// Assert
 	suite.NoError(err)
 
 	// Cleanup
-	err = suite.impl.Delete(hostConfig.Name)
+	err = suite.impl.Delete(host.Name)
 
 	// Assert
 	suite.NoError(err)
