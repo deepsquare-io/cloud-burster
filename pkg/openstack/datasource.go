@@ -361,7 +361,7 @@ func (s *DataSource) Delete(name string) error {
 	// Find associated port and delete it
 	portID, err := try.Do(func() (string, error) {
 		return s.FindPortByDeviceID(serverID)
-	}, 3, 5*time.Second)
+	}, 10, 5*time.Second)
 	if err != nil {
 		logger.I.Warn("couldn't delete port of associated server",
 			zap.Any("serverID", serverID),
@@ -380,5 +380,6 @@ func (s *DataSource) Delete(name string) error {
 		return err
 	}
 
+	logger.I.Warn("deleted a server", zap.Any("server", serverID))
 	return nil
 }

@@ -1,7 +1,9 @@
 package create
 
 import (
+	"context"
 	"errors"
+	"sync"
 
 	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/cloud"
@@ -19,11 +21,20 @@ var Command = &cli.Command{
 	Flags:     flags,
 	ArgsUsage: "<hostnames>",
 	Action: func(cCtx *cli.Context) error {
+		ctx := cCtx.Context
 		if cCtx.NArg() < 1 {
 			return errors.New("not enough arguments")
 		}
 		arg := cCtx.Args().Get(0)
-		hostnames := generators.SplitCommaOutsideOfBrackets(arg)
+		hostnamesRanges := generators.SplitCommaOutsideOfBrackets(arg)
+
+		var hostnames []string
+		for _, hostnamesRange := range hostnamesRanges {
+			h := generators.ExpandBrackets(hostnamesRange)
+			hostnames = append(hostnames, h...)
+		}
+
+		logger.I.Info("Creating...", zap.Any("hostnames", hostnames))
 
 		// Parse config
 		conf, err := config.ParseFile(cCtx.String("config.path"))
@@ -31,29 +42,53 @@ var Command = &cli.Command{
 			return err
 		}
 
+		var wg sync.WaitGroup
+		errChan := make(chan error)
+
 		for _, hostname := range hostnames {
-			// Search host and cloud by hostname
-			host, cl, err := conf.SearchHostByHostName(hostname)
-			if err != nil {
-				return err
-			}
+			wg.Add(1)
+			go func(ctx *context.Context, hostname string, wg *sync.WaitGroup, errChan chan<- error) {
+				defer wg.Done()
 
-			// Instanciate the corresponding cloud
-			cloudWorker, err := cloud.Create(cl)
-			if err != nil {
-				return err
-			}
+				// Search host and cloud by hostname
+				host, cl, err := conf.SearchHostByHostName(hostname)
+				if err != nil {
+					errChan <- err
+					return
+				}
 
-			if err := cloudWorker.Create(host, &cl.Network, &cl.CloudConfigTemplateOpts); err != nil {
-				logger.I.Error(
-					"couldn't create the host",
-					zap.Any("host", host),
-					zap.Any("network", cl.Network),
-					zap.Any("cloudConfig", cl.CloudConfigTemplateOpts),
-				)
+				// Instanciate the corresponding cloud
+				cloudWorker, err := cloud.Create(cl)
+				if err != nil {
+					errChan <- err
+					return
+				}
+
+				if err := cloudWorker.Create(host, &cl.Network, &cl.CloudConfigTemplateOpts); err != nil {
+					logger.I.Warn(
+						"couldn't create the host",
+						zap.Any("host", host),
+						zap.Any("network", cl.Network),
+						zap.Any("cloudConfig", cl.CloudConfigTemplateOpts),
+					)
+					errChan <- err
+					return
+				}
+			}(&ctx, hostname, &wg, errChan)
+		}
+
+		go func() {
+			wg.Wait()
+			close(errChan)
+		}()
+
+		for err := range errChan {
+			if err != nil {
 				return err
 			}
 		}
+
+		logger.I.Info("Success command successful.")
 
 		return nil
 	},
