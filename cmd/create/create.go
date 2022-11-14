@@ -47,7 +47,7 @@ var Command = &cli.Command{
 
 		for _, hostname := range hostnames {
 			wg.Add(1)
-			go func(ctx *context.Context, hostname string, wg *sync.WaitGroup, errChan chan<- error) {
+			go func(ctx context.Context, hostname string, wg *sync.WaitGroup, errChan chan<- error) {
 				defer wg.Done()
 
 				// Search host and cloud by hostname
@@ -64,7 +64,7 @@ var Command = &cli.Command{
 					return
 				}
 
-				if err := cloudWorker.Create(host, cl); err != nil {
+				if err := cloudWorker.Create(ctx, host, cl); err != nil {
 					logger.I.Warn(
 						"couldn't create the host",
 						zap.Error(err),
@@ -74,7 +74,7 @@ var Command = &cli.Command{
 					errChan <- err
 					return
 				}
-			}(&ctx, hostname, &wg, errChan)
+			}(ctx, hostname, &wg, errChan)
 		}
 
 		go func() {

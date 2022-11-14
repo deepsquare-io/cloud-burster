@@ -45,7 +45,7 @@ var Command = &cli.Command{
 		for _, hostname := range hostnames {
 			wg.Add(1)
 
-			go func(ctx *context.Context, hostname string, wg *sync.WaitGroup, errChan chan<- error) {
+			go func(ctx context.Context, hostname string, wg *sync.WaitGroup, errChan chan<- error) {
 				defer wg.Done()
 				// Search host and cloud by hostname
 				host, cl, err := conf.SearchHostByHostName(hostname)
@@ -61,7 +61,7 @@ var Command = &cli.Command{
 					return
 				}
 
-				if err := cloudWorker.Delete(host.Name); err != nil {
+				if err := cloudWorker.Delete(ctx, host.Name); err != nil {
 					logger.I.Error(
 						"couldn't delete the host",
 						zap.Error(err),
@@ -70,7 +70,7 @@ var Command = &cli.Command{
 					errChan <- err
 					return
 				}
-			}(&ctx, hostname, &wg, errChan)
+			}(ctx, hostname, &wg, errChan)
 		}
 
 		go func() {
