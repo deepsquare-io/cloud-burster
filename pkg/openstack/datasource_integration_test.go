@@ -3,6 +3,7 @@
 package openstack_test
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -118,13 +119,13 @@ func (suite *DataSourceTestSuite) TestCreatePort() {
 
 func (suite *DataSourceTestSuite) TestCreate() {
 	// Act
-	err := suite.impl.Create(&host, &cloud)
+	err := suite.impl.Create(context.Background(), &host, &cloud)
 
 	// Assert
 	suite.NoError(err)
 
 	// Cleanup
-	err = suite.impl.Delete(host.Name)
+	err = suite.impl.Delete(context.Background(), host.Name)
 
 	// Assert
 	suite.NoError(err)

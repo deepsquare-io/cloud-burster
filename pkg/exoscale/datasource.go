@@ -1,6 +1,8 @@
 package exoscale
 
 import (
+	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
@@ -30,7 +32,6 @@ func New(
 		endpoint,
 		apiKey,
 		apiSecret,
-		egoscale.WithoutV2Client(),
 	)
 	client.HTTPClient.Transport = &middlewares.RoundTripper{
 		RoundTripper: http.DefaultTransport,
@@ -57,34 +58,42 @@ func New(
 }
 
 // FindImageID retrieves the image UUID from name
-func (s *DataSource) FindImageID(name string) (string, error) {
+func (s *DataSource) FindImageID(ctx context.Context, name string) (string, error) {
 	logger.I.Debug("FindImageID called", zap.String("name", name))
-	req := &egoscale.ListTemplates{
-		Name:           name,
-		TemplateFilter: "", // TODO
-		ZoneID:         s.zone.ID,
-	}
-	resp, err := s.client.Request(req)
-	if err != nil {
-		return "", err
-	}
-	templates := resp.(*egoscale.ListTemplatesResponse)
-	for _, template := range templates.Template {
-		if template.Name == name {
-			logger.I.Debug("FindImageID returned", zap.String("image", template.ID.String()))
-			return template.ID.String(), nil
+	for _, filter := range []string{"mine", "featured", "community"} {
+		req := &egoscale.ListTemplates{
+			Name:           name,
+			TemplateFilter: filter,
+			ZoneID:         s.zone.ID,
+		}
+		resp, err := s.client.RequestWithContext(ctx, req)
+		if err != nil {
+			logger.I.Warn(
+				"FindImageID failed with template filter",
+				zap.String("name", name),
+				zap.String("filter", filter),
+			)
+			continue
+		}
+		templates := resp.(*egoscale.ListTemplatesResponse)
+		for _, template := range templates.Template {
+			if template.Name == name {
+				logger.I.Debug("FindImageID returned", zap.String("image", template.ID.String()))
+				return template.ID.String(), nil
+			}
 		}
 	}
+
 	return "", errors.New("didn't find an image")
 }
 
 // FindFlavorID retrieves the flavor UUID from name
-func (s *DataSource) FindFlavorID(name string) (string, error) {
+func (s *DataSource) FindFlavorID(ctx context.Context, name string) (string, error) {
 	logger.I.Debug("FindFlavorID called", zap.String("name", name))
 	req := &egoscale.ListServiceOfferings{
 		Name: name,
 	}
-	resp, err := s.client.Request(req)
+	resp, err := s.client.RequestWithContext(ctx, req)
 	if err != nil {
 		return "", err
 	}
@@ -99,12 +108,12 @@ func (s *DataSource) FindFlavorID(name string) (string, error) {
 }
 
 // FindNetworkID retrieves the network UUID from name
-func (s *DataSource) FindNetworkID(name string) (string, error) {
+func (s *DataSource) FindNetworkID(ctx context.Context, name string) (string, error) {
 	logger.I.Debug("FindNetworkID called", zap.String("name", name))
 	req := &egoscale.ListNetworks{
 		ZoneID: s.zone.ID,
 	}
-	resp, err := s.client.Request(req)
+	resp, err := s.client.RequestWithContext(ctx, req)
 	if err != nil {
 		return "", err
 	}
@@ -120,6 +129,7 @@ func (s *DataSource) FindNetworkID(name string) (string, error) {
 
 // Create an instance
 func (s *DataSource) Create(
+	ctx context.Context,
 	host *config.Host,
 	cloud *config.Cloud,
 ) error {
@@ -128,15 +138,15 @@ func (s *DataSource) Create(
 		zap.Any("host", host),
 		zap.Any("cloud", cloud),
 	)
-	imageID, err := s.FindImageID(host.ImageName)
+	imageID, err := s.FindImageID(ctx, host.ImageName)
 	if err != nil {
 		return err
 	}
-	flavorID, err := s.FindFlavorID(host.ImageName)
+	flavorID, err := s.FindFlavorID(ctx, host.FlavorName)
 	if err != nil {
 		return err
 	}
-	networkID, err := s.FindNetworkID(cloud.Network.Name)
+	networkID, err := s.FindNetworkID(ctx, cloud.Network.Name)
 	if err != nil {
 		return err
 	}
@@ -156,18 +166,21 @@ func (s *DataSource) Create(
 	if err != nil {
 		return err
 	}
+	startVM := true
+	userDataB64 := base64.StdEncoding.EncodeToString([]byte(userData))
 	req := &egoscale.DeployVirtualMachine{
 		Name:              host.Name,
 		TemplateID:        egoscale.MustParseUUID(imageID),
 		ServiceOfferingID: egoscale.MustParseUUID(flavorID),
 		RootDiskSize:      int64(host.DiskSize),
 		ZoneID:            s.zone.ID,
-		UserData:          userData,
+		UserData:          userDataB64,
+		StartVM:           &startVM,
 		NetworkIDs: []egoscale.UUID{
 			*egoscale.MustParseUUID(networkID),
 		},
 	}
-	resp, err := s.client.Request(req)
+	resp, err := s.client.RequestWithContext(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -176,13 +189,16 @@ func (s *DataSource) Create(
 	return nil
 }
 
-func (s *DataSource) FindServer(name string) (egoscale.VirtualMachine, error) {
+func (s *DataSource) FindServer(
+	ctx context.Context,
+	name string,
+) (egoscale.VirtualMachine, error) {
 	logger.I.Debug("FindServer called", zap.String("name", name))
 	req := &egoscale.ListVirtualMachines{
 		Name:   name,
 		ZoneID: s.zone.ID,
 	}
-	resp, err := s.client.Request(req)
+	resp, err := s.client.RequestWithContext(ctx, req)
 	if err != nil {
 		return egoscale.VirtualMachine{}, err
 	}
@@ -196,16 +212,35 @@ func (s *DataSource) FindServer(name string) (egoscale.VirtualMachine, error) {
 	return egoscale.VirtualMachine{}, errors.New("didn't find a server")
 }
 
-func (s *DataSource) Delete(name string) error {
+func (s *DataSource) Delete(
+	ctx context.Context,
+	name string,
+) error {
 	logger.I.Warn("Delete called", zap.String("name", name))
 	server, err := try.Do(func() (egoscale.VirtualMachine, error) {
-		return s.FindServer(name)
-	}, 3, 5*time.Second)
-	if err != nil {
-		return err
-	}
+		vm, err := s.FindServer(ctx, name)
+		if err != nil {
+			return vm, err
+		}
 
-	err = s.client.Delete(server)
+		state := egoscale.VirtualMachineState(vm.State)
+		if state != egoscale.VirtualMachineRunning &&
+			state != egoscale.VirtualMachineShutdowned &&
+			state != egoscale.VirtualMachineStopped {
+			logger.I.Debug("the server isn't stable yet", zap.Any("server", vm))
+			return vm, errors.New("state isn't stable yet")
+		}
+		if state == egoscale.VirtualMachineDestroyed {
+			logger.I.Warn("Somehow the server was already deleted", zap.Any("server", vm))
+			return vm, nil
+		}
+
+		if err := s.client.DeleteWithContext(ctx, vm); err != nil {
+			return vm, err
+		}
+
+		return vm, nil
+	}, 10, 5*time.Second)
 	if err != nil {
 		return err
 	}

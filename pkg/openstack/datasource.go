@@ -1,6 +1,7 @@
 package openstack
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -259,6 +260,7 @@ func (s *DataSource) DeletePort(id string) error {
 
 // Create an instance
 func (s *DataSource) Create(
+	ctx context.Context,
 	host *config.Host,
 	cloud *config.Cloud,
 ) error {
@@ -365,7 +367,7 @@ func (s *DataSource) FindServerID(name string) (string, error) {
 	return result.ID, nil
 }
 
-func (s *DataSource) Delete(name string) error {
+func (s *DataSource) Delete(ctx context.Context, name string) error {
 	logger.I.Warn("Delete called", zap.String("name", name))
 	serverID, err := try.Do(func() (string, error) {
 		return s.FindServerID(name)

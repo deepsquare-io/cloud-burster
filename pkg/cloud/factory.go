@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"context"
 	"errors"
 
 	"github.com/squarefactory/cloud-burster/logger"
@@ -12,10 +13,14 @@ import (
 
 type DataSource interface {
 	Create(
+		ctx context.Context,
 		host *config.Host,
 		cloud *config.Cloud,
 	) error
-	Delete(name string) error
+	Delete(
+		ctx context.Context,
+		name string,
+	) error
 }
 
 func New(conf *config.Cloud) (DataSource, error) {

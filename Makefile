@@ -23,7 +23,7 @@ coverage:
 
 .PHONY: integration
 integration:
-	go test -race -covermode=atomic -tags=integration -timeout=30s ./...
+	go test -race -covermode=atomic -tags=integration -timeout=300s ./...
 
 .PHONY: lint
 lint:
