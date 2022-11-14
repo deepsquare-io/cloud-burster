@@ -104,7 +104,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         id: get_version
         run: |
-          OCI_VERSION=$(echo ${GITHUB_REF#refs/*/} | sed 's/+/-/g' | sed 's/cli-//g')
+          OCI_VERSION=$(echo ${GITHUB_REF#refs/*/} | sed 's/+/-/g')
           echo "VERSION=${OCI_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Create release and upload binaries
