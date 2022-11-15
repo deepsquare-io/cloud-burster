@@ -95,14 +95,10 @@ func (suite *DataSourceTestSuite) BeforeTest(suiteName, testName string) {
 	)
 }
 func TestDataSourceTestSuite(t *testing.T) {
-	// url := os.Getenv("EXO_URL")
-	// key := os.Getenv("EXO_API_KEY")
-	// secret := os.Getenv("EXO_API_SECRET")
-	// zone := os.Getenv("EXO_ZONE")
-	url := "https://api.exoscale.com/compute/"
-	key := "EXO8fe7a4b7eb3d1cce648dc300"
-	secret := "v_hGzbWzIq7oFQZMpQvR_DAcL6J9jxJAsAkgGCIJV2M"
-	zone := "at-vie-1"
+	url := os.Getenv("EXO_URL")
+	key := os.Getenv("EXO_API_KEY")
+	secret := os.Getenv("EXO_API_SECRET")
+	zone := os.Getenv("EXO_ZONE")
 	// Skip test if not defined
 	if url == "" || key == "" || secret == "" {
 		logger.I.Warn("mandatory variables are not set!")
