@@ -38,6 +38,9 @@ var Command = &cli.Command{
 		if err != nil {
 			return err
 		}
+		if err := conf.Validate(); err != nil {
+			return err
+		}
 
 		var wg sync.WaitGroup
 		errChan := make(chan error)

@@ -6,6 +6,7 @@ import (
 	"github.com/squarefactory/cloud-burster/cmd/create"
 	"github.com/squarefactory/cloud-burster/cmd/delete"
 	"github.com/squarefactory/cloud-burster/cmd/generate"
+	"github.com/squarefactory/cloud-burster/cmd/validate.go"
 	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
@@ -55,6 +56,7 @@ var app = &cli.App{
 		create.Command,
 		delete.Command,
 		generate.Command,
+		validate.Command,
 	},
 	Suggest: true,
 }
