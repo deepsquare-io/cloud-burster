@@ -95,18 +95,22 @@ func (c *Config) GenerateHosts() (string, error) {
 
 	// Search in all clouds
 	for _, cloud := range c.Clouds {
+		logger.I.Debug("found cloud", zap.Any("cloud", cloud))
 		// Search in all hosts
 		for _, host := range cloud.Hosts {
+			logger.I.Debug("found host", zap.Any("host", host))
 			sb.WriteString(fmt.Sprintf("%s %s\n", host.IP, host.Name))
 		}
 
 		// Search in all groups host
 		for _, groupsHost := range cloud.GroupsHost {
+			logger.I.Debug("found groupsHost", zap.Any("groupsHost", groupsHost))
 			hosts, err := groupsHost.GenerateHosts()
 			if err != nil {
 				return "", err
 			}
 			for _, host := range hosts {
+				logger.I.Debug("found host", zap.Any("host", host))
 				sb.WriteString(fmt.Sprintf("%s %s\n", host.IP, host.Name))
 			}
 		}

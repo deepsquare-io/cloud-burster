@@ -20,6 +20,9 @@ var Command = &cli.Command{
 				if err != nil {
 					return err
 				}
+				if err := conf.Validate(); err != nil {
+					return err
+				}
 
 				hosts, err := conf.GenerateHosts()
 				if err != nil {
