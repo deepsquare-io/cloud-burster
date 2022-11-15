@@ -12,7 +12,8 @@ import (
 )
 
 var cleanConfig = config.Config{
-	APIVersion: config.APIVersion,
+	APIVersion:   config.APIVersion,
+	SuffixSearch: []string{".example.com"},
 	Clouds: []config.Cloud{
 		cleanOpenstackCloud,
 		cleanExoscaleCloud,
