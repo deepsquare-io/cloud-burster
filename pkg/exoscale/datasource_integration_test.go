@@ -4,6 +4,7 @@ package exoscale_test
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/squarefactory/cloud-burster/logger"

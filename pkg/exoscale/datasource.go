@@ -60,7 +60,8 @@ func New(
 // FindImageID retrieves the image UUID from name
 func (s *DataSource) FindImageID(ctx context.Context, name string) (string, error) {
 	logger.I.Debug("FindImageID called", zap.String("name", name))
-	for _, filter := range []string{"mine", "featured", "community"} {
+
+	for _, filter := range []string{"self", "featured", "community"} {
 		req := &egoscale.ListTemplates{
 			Name:           name,
 			TemplateFilter: filter,
