@@ -72,6 +72,21 @@ func (suite *GeneratorsTestSuite) TestExpandBrackets() {
 			title: "Positive test",
 		},
 		{
+			input: "cn-s-1",
+			expected: []string{
+				"cn-s-1",
+			},
+			title: "No brackets",
+		},
+		{
+			input: "cn-s-[1-2]]",
+			expected: []string{
+				"cn-s-1]",
+				"cn-s-2]",
+			},
+			title: "Weird format",
+		},
+		{
 			input:    "",
 			expected: []string{},
 			title:    "Empty test",

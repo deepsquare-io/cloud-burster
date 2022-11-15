@@ -34,8 +34,6 @@ var Command = &cli.Command{
 			hostnames = append(hostnames, h...)
 		}
 
-		logger.I.Info("Creating...", zap.Any("hostnames", hostnames))
-
 		// Parse config
 		conf, err := config.ParseFile(cCtx.String("config.path"))
 		if err != nil {
@@ -44,6 +42,8 @@ var Command = &cli.Command{
 		if err := conf.Validate(); err != nil {
 			return err
 		}
+
+		logger.I.Info("Creating...", zap.Any("hostnames", hostnames))
 
 		var wg sync.WaitGroup
 		errChan := make(chan error)
@@ -54,9 +54,34 @@ var Command = &cli.Command{
 				defer wg.Done()
 
 				// Search host and cloud by hostname
-				host, cl, err := conf.SearchHostByHostName(hostname)
-				if err != nil {
-					errChan <- err
+				var host *config.Host
+				var cl *config.Cloud
+				var err error
+
+				// Search hosts using hostname and suffix
+				for _, suffix := range conf.SuffixSearch {
+					host, cl, err = conf.SearchHostByHostName(hostname + suffix)
+					if err != nil {
+						errChan <- err
+						return
+					}
+					if host != nil && cl != nil {
+						break
+					}
+				}
+
+				// If host is nil, default to search using hostname
+				if host == nil && cl == nil {
+					host, cl, err = conf.SearchHostByHostName(hostname)
+					if err != nil {
+						errChan <- err
+						return
+					}
+				}
+
+				// If host is still nil, crash
+				if host == nil && cl == nil {
+					errChan <- errors.New("hostname not found")
 					return
 				}
 

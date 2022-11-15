@@ -47,6 +47,11 @@ func ExpandBrackets(pattern string) []string {
 		}
 	}
 
+	// This means there is no brackets
+	if beginIdx == -1 {
+		return []string{pattern}
+	}
+
 	var merge []string
 	for _, pattern := range out {
 		names := ExpandBrackets(pattern)

@@ -1,4 +1,4 @@
-package delete
+package search
 
 import (
 	"context"
@@ -6,17 +6,19 @@ import (
 	"sync"
 
 	"github.com/squarefactory/cloud-burster/logger"
-	"github.com/squarefactory/cloud-burster/pkg/cloud"
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/squarefactory/cloud-burster/utils/generators"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 )
 
+var flags = []cli.Flag{}
+
 var Command = &cli.Command{
-	Name:      "delete",
-	Usage:     "Delete a VM on a public cloud.",
-	ArgsUsage: "<hostname>",
+	Name:      "search",
+	Usage:     "Search a VM in the config.",
+	Flags:     flags,
+	ArgsUsage: "<hostnames>",
 	Action: func(cCtx *cli.Context) error {
 		ctx := cCtx.Context
 		if cCtx.NArg() < 1 {
@@ -31,8 +33,6 @@ var Command = &cli.Command{
 			hostnames = append(hostnames, h...)
 		}
 
-		logger.I.Info("Deleting...", zap.Any("hostnames", hostnames))
-
 		// Parse config
 		conf, err := config.ParseFile(cCtx.String("config.path"))
 		if err != nil {
@@ -42,14 +42,16 @@ var Command = &cli.Command{
 			return err
 		}
 
+		logger.I.Info("Searching...", zap.Any("hostnames", hostnames))
+
 		var wg sync.WaitGroup
 		errChan := make(chan error)
 
 		for _, hostname := range hostnames {
 			wg.Add(1)
-
 			go func(ctx context.Context, hostname string, wg *sync.WaitGroup, errChan chan<- error) {
 				defer wg.Done()
+
 				// Search host and cloud by hostname
 				var host *config.Host
 				var cl *config.Cloud
@@ -82,22 +84,11 @@ var Command = &cli.Command{
 					return
 				}
 
-				// Instanciate the corresponding cloud
-				cloudWorker, err := cloud.New(cl)
-				if err != nil {
-					errChan <- err
-					return
-				}
-
-				if err := cloudWorker.Delete(ctx, host.Name); err != nil {
-					logger.I.Error(
-						"couldn't delete the host",
-						zap.Error(err),
-						zap.Any("host", host),
-					)
-					errChan <- err
-					return
-				}
+				logger.I.Info(
+					"Search command successful.",
+					zap.Any("host", host),
+					zap.Any("cloud", cl),
+				)
 			}(ctx, hostname, &wg, errChan)
 		}
 
@@ -108,7 +99,7 @@ var Command = &cli.Command{
 
 		for e := range errChan {
 			if e != nil {
-				logger.I.Error("delete thrown an error", zap.Error(e))
+				logger.I.Error("create thrown an error", zap.Error(e))
 				err = e
 			}
 		}
@@ -116,7 +107,7 @@ var Command = &cli.Command{
 			return err
 		}
 
-		logger.I.Info("Delete command successful.")
+		logger.I.Info("Search command successful.")
 
 		return nil
 	},

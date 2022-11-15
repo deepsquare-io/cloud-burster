@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -28,8 +27,9 @@ func init() {
 }
 
 type Config struct {
-	APIVersion string  `yaml:"apiVersion" validate:"equalAPI"`
-	Clouds     []Cloud `yaml:"clouds" validate:"dive"`
+	APIVersion   string   `yaml:"apiVersion" validate:"equalAPI"`
+	Clouds       []Cloud  `yaml:"clouds" validate:"dive"`
+	SuffixSearch []string `yaml:"suffixSearch"`
 }
 
 func (c *Config) Validate() error {
@@ -80,10 +80,6 @@ func (c *Config) SearchHostByHostName(hostname string) (*Host, *Cloud, error) {
 		if found {
 			break
 		}
-	}
-
-	if foundHost == nil || foundCloud == nil {
-		return nil, nil, errors.New("host not found")
 	}
 
 	return foundHost, foundCloud, nil

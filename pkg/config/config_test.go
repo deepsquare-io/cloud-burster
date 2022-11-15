@@ -122,6 +122,12 @@ func (suite *ConfigTestSuite) TestSearchHostByHostName() {
 			expectedHost:  &cleanConfig.Clouds[0].Hosts[0],
 			title:         "Search in hosts",
 		},
+		{
+			input:         "aaa",
+			expectedCloud: nil,
+			expectedHost:  nil,
+			title:         "Not found",
+		},
 	}
 
 	// Act
