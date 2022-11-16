@@ -16,6 +16,12 @@ Example:
 
 ```yaml
 apiVersion: 'cloud-burster.squarefactory.io/v1alpha1'
+
+## Use suffixSearch to append a suffix when receiving an input.
+## For example, if you use the name "cn-s-1" and the suffixSearch "example.com",
+## the cloud-burster will search "cn-s-1.example.com", then "cn-s-1".
+suffixSearch:
+  - ".example.com"
 clouds:
   - type: openstack
     network:
