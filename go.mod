@@ -3,7 +3,7 @@ module github.com/squarefactory/cloud-burster
 go 1.19
 
 require (
-	github.com/exoscale/egoscale v0.90.4
+	github.com/exoscale/egoscale v0.91.0
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/gophercloud/gophercloud v1.0.0
 	github.com/stretchr/testify v1.8.1
