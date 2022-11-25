@@ -69,6 +69,10 @@ runcmd:
   - [ sed, "-i", "-e", 's/SELINUX=enforcing/SELINUX=disabled/g', /etc/selinux/config]
   - [ setenforce, "0" ]
 
+  - [mkfs.xfs, "/dev/sdb"]
+  - [mkdir, -p, "/mnt/storage"]
+  - [mount, "/dev/sdb", "/mnt/storage"]
+
   - mkdir -p /configs && GIT_SSH_COMMAND='ssh -i /key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o IdentitiesOnly=yes' git clone -b ref url /configs
   - if [ -f /configs/post.sh ] && [ -x /configs/post.sh ]; then cd /configs && ./post.sh compute; fi
   - [ rm, -f, /key ]
