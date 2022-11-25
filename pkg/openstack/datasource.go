@@ -317,9 +317,15 @@ func (s *DataSource) Create(
 				UUID:                image,
 				SourceType:          "image",
 				DestinationType:     "local",
-				VolumeSize:          host.DiskSize,
 				BootIndex:           0,
 				DeleteOnTermination: true,
+			},
+			{
+				SourceType:          "blank",
+				DestinationType:     "volume",
+				DeleteOnTermination: true,
+				BootIndex:           1,
+				VolumeSize:          host.DiskSize,
 			},
 		},
 	}).Extract()

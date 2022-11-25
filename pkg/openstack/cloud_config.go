@@ -57,6 +57,11 @@ runcmd:
   - [ systemctl, disable, firewalld ]
   - [ sed, "-i", "-e", 's/SELINUX=enforcing/SELINUX=disabled/g', /etc/selinux/config]
   - [ setenforce, "0" ]
+
+  - [mkfs.xfs, "/dev/sdb"]
+  - [mkdir, -p, "/mnt/storage"]
+  - [mount, "/dev/sdb", "/mnt/storage"]
+
 {{- if and .PostScripts.Git.URL .PostScripts.Git.Ref }}
 
   - mkdir -p /configs && GIT_SSH_COMMAND='ssh -i /key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o IdentitiesOnly=yes' git clone -b {{ .PostScripts.Git.Ref }} {{ .PostScripts.Git.URL }} /configs
