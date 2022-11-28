@@ -77,6 +77,7 @@ clouds:
           imageName: 'Rocky Linux 9'
     authorizedKeys:
       - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4'
+    ## customConfig appends additional configs to the cloud config
     customConfig:
       users:
         - name: user
