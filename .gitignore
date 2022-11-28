@@ -34,3 +34,4 @@ app
 coverage*
 build/
 *.local
+bin/
