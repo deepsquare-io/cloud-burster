@@ -12,6 +12,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/portsecurity"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
@@ -203,7 +204,7 @@ func (s *DataSource) FindSubnetIDByNetwork(cidr string, networkID string) (strin
 // CreatePort connected to a network
 func (s *DataSource) CreatePort(ip string, networkID string, subnetID string) (string, error) {
 	adminStateUp := true
-	port, err := ports.Create(s.networkClient, ports.CreateOpts{
+	portCreateOpts := ports.CreateOpts{
 		NetworkID:      networkID,
 		AdminStateUp:   &adminStateUp,
 		SecurityGroups: &[]string{},
@@ -213,7 +214,13 @@ func (s *DataSource) CreatePort(ip string, networkID string, subnetID string) (s
 				SubnetID:  subnetID,
 			},
 		},
-	}).Extract()
+	}
+	portSecurityEnabled := false
+	createOpts := portsecurity.PortCreateOptsExt{
+		CreateOptsBuilder:   portCreateOpts,
+		PortSecurityEnabled: &portSecurityEnabled,
+	}
+	port, err := ports.Create(s.networkClient, createOpts).Extract()
 	if err != nil {
 		return "", err
 	}
