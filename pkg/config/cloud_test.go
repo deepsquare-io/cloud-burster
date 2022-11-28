@@ -27,6 +27,14 @@ var cleanOpenstackCloud = config.Cloud{
 	GroupsHost: []config.GroupHost{
 		cleanGroupHost,
 	},
+	CustomConfig: map[interface{}]interface{}{
+		"users": []interface{}{
+			map[string]interface{}{
+				"name":   "user",
+				"passwd": "$6$rounds=4096$im4bWTNrEwWBTJy/$4xuVSLiNd56v9Pxk7tHehxgFDLgmqxod78qV0484ys.Duu1mXZ9dq4w1vIjrNOWh25ewWQ6N8E6MLxdvXxv3x1",
+			},
+		},
+	},
 	Type:      "openstack",
 	Openstack: &cleanOpenstack,
 }
@@ -48,6 +56,14 @@ var cleanExoscaleCloud = config.Cloud{
 	},
 	GroupsHost: []config.GroupHost{
 		cleanGroupHost,
+	},
+	CustomConfig: map[interface{}]interface{}{
+		"users": []interface{}{
+			map[string]interface{}{
+				"name":   "user",
+				"passwd": "$6$rounds=4096$im4bWTNrEwWBTJy/$4xuVSLiNd56v9Pxk7tHehxgFDLgmqxod78qV0484ys.Duu1mXZ9dq4w1vIjrNOWh25ewWQ6N8E6MLxdvXxv3x1",
+			},
+		},
 	},
 	Type:     "exoscale",
 	Exoscale: &cleanExoscale,

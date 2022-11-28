@@ -15,6 +15,7 @@ import (
 	"github.com/squarefactory/cloud-burster/pkg/middlewares"
 	"github.com/squarefactory/cloud-burster/utils/try"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
 )
 
 type DataSource struct {
@@ -156,19 +157,25 @@ func (s *DataSource) Create(
 		return err
 	}
 	mask, _ := net.Mask.Size()
+
+	customConfig, err := yaml.Marshal(cloud.CustomConfig)
+	if err != nil {
+		return err
+	}
 	userData, err := GenerateCloudConfig(&CloudConfigOpts{
-		AuthorizedKeys: cloud.AuthorizedKeys,
-		PostScripts:    cloud.PostScripts,
-		DNS:            cloud.Network.DNS,
-		Search:         cloud.Network.Search,
-		AddressCIDR:    fmt.Sprintf("%s/%d", host.IP, mask),
-		Gateway:        cloud.Network.Gateway,
+		AuthorizedKeys:    cloud.AuthorizedKeys,
+		PostScripts:       cloud.PostScripts,
+		DNS:               cloud.Network.DNS,
+		Search:            cloud.Network.Search,
+		AddressCIDR:       fmt.Sprintf("%s/%d", host.IP, mask),
+		Gateway:           cloud.Network.Gateway,
+		CustomCloudConfig: string(customConfig),
 	})
 	if err != nil {
 		return err
 	}
 	startVM := true
-	userDataB64 := base64.StdEncoding.EncodeToString([]byte(userData))
+	userDataB64 := base64.StdEncoding.EncodeToString(userData)
 	req := &egoscale.DeployVirtualMachine{
 		Name:              host.Name,
 		TemplateID:        egoscale.MustParseUUID(imageID),

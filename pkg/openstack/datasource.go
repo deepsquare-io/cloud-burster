@@ -21,6 +21,7 @@ import (
 	"github.com/squarefactory/cloud-burster/pkg/middlewares"
 	"github.com/squarefactory/cloud-burster/utils/try"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
 )
 
 type DataSource struct {
@@ -290,11 +291,18 @@ func (s *DataSource) Create(
 		return err
 	}
 	configDrive := true
+
+	customConfig, err := yaml.Marshal(cloud.CustomConfig)
+	if err != nil {
+		return err
+	}
+
 	userData, err := GenerateCloudConfig(&CloudConfigOpts{
-		AuthorizedKeys: cloud.AuthorizedKeys,
-		PostScripts:    cloud.PostScripts,
-		DNS:            cloud.Network.DNS,
-		Search:         cloud.Network.Search,
+		AuthorizedKeys:    cloud.AuthorizedKeys,
+		PostScripts:       cloud.PostScripts,
+		DNS:               cloud.Network.DNS,
+		Search:            cloud.Network.Search,
+		CustomCloudConfig: string(customConfig),
 	})
 	if err != nil {
 		return err
@@ -304,7 +312,7 @@ func (s *DataSource) Create(
 			Name:      host.Name,
 			ImageRef:  image,
 			FlavorRef: flavor,
-			UserData:  []byte(userData),
+			UserData:  userData,
 			Networks: []servers.Network{
 				{
 					Port: portID,

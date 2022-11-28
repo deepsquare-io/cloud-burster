@@ -5,7 +5,6 @@ package openstack_test
 import (
 	"testing"
 
-	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/squarefactory/cloud-burster/pkg/openstack"
 	"github.com/stretchr/testify/suite"
@@ -30,6 +29,11 @@ func (suite *CloudConfigTestSuite) TestGenerateCloudConfig() {
 				Ref: "ref",
 			},
 		},
+
+		CustomCloudConfig: `users:
+  - name: user
+    passwd: $6$rounds=4096$im4bWTNrEwWBTJy/$4xuVSLiNd56v9Pxk7tHehxgFDLgmqxod78qV0484ys.Duu1mXZ9dq4w1vIjrNOWh25ewWQ6N8E6MLxdvXxv3x1
+`,
 	}
 	expected := `#cloud-config
 disable_root: false
@@ -80,12 +84,15 @@ runcmd:
 
   - [ touch, /etc/cloud/cloud-init.disabled ]
 
+users:
+  - name: user
+    passwd: $6$rounds=4096$im4bWTNrEwWBTJy/$4xuVSLiNd56v9Pxk7tHehxgFDLgmqxod78qV0484ys.Duu1mXZ9dq4w1vIjrNOWh25ewWQ6N8E6MLxdvXxv3x1
+
 `
 
 	res, err := openstack.GenerateCloudConfig(&opts)
 	suite.NoError(err)
-	suite.Equal(expected, res)
-	logger.I.Debug(res)
+	suite.Equal(expected, string(res))
 }
 
 func TestCloudConfigTestSuite(t *testing.T) {

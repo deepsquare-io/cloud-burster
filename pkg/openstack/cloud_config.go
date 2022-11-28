@@ -2,16 +2,19 @@ package openstack
 
 import (
 	"bytes"
+	"fmt"
 	"text/template"
 
 	"github.com/squarefactory/cloud-burster/pkg/config"
+	"gopkg.in/yaml.v3"
 )
 
 type CloudConfigOpts struct {
-	AuthorizedKeys []string
-	PostScripts    config.PostScriptsOpts
-	DNS            string
-	Search         string
+	AuthorizedKeys    []string
+	PostScripts       config.PostScriptsOpts
+	DNS               string
+	Search            string
+	CustomCloudConfig string
 }
 
 const cloudConfigTemplate = `#cloud-config
@@ -72,18 +75,34 @@ runcmd:
 
   - [ touch, /etc/cloud/cloud-init.disabled ]
 
+{{ .CustomCloudConfig }}
 `
 
-func GenerateCloudConfig(options *CloudConfigOpts) (string, error) {
+func validate(cloudConfig []byte) error {
+	m := make(map[interface{}]interface{})
+	err := yaml.Unmarshal(cloudConfig, &m)
+	if err != nil {
+		return fmt.Errorf("cloud config validation failed: %s", err.Error())
+	}
+	return nil
+}
+
+func GenerateCloudConfig(options *CloudConfigOpts) ([]byte, error) {
 	t, err := template.New("cloud-config").Parse(cloudConfigTemplate)
 	if err != nil {
-		return "", err
+		return []byte{}, err
 	}
 
 	var out bytes.Buffer
 	if err := t.Execute(&out, options); err != nil {
-		return "", err
+		return []byte{}, err
 	}
 
-	return out.String(), nil
+	outb := out.Bytes()
+
+	if err := validate(outb); err != nil {
+		return []byte{}, err
+	}
+
+	return outb, nil
 }
