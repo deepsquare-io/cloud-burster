@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/config"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
@@ -82,6 +84,7 @@ func validate(cloudConfig []byte) error {
 	m := make(map[interface{}]interface{})
 	err := yaml.Unmarshal(cloudConfig, &m)
 	if err != nil {
+		logger.I.Error("cloud config validation failed", zap.Error(err), zap.String("cloud-config", string(cloudConfig)))
 		return fmt.Errorf("cloud config validation failed: %s", err.Error())
 	}
 	return nil

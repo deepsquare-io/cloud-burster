@@ -299,9 +299,14 @@ func (s *DataSource) Create(
 	}
 	configDrive := true
 
-	customConfig, err := yaml.Marshal(cloud.CustomConfig)
-	if err != nil {
-		return err
+	var customConfig []byte
+	if len(cloud.CustomConfig) == 0 {
+		customConfig = []byte{}
+	} else {
+		customConfig, err = yaml.Marshal(cloud.CustomConfig)
+		if err != nil {
+			return err
+		}
 	}
 
 	userData, err := GenerateCloudConfig(&CloudConfigOpts{

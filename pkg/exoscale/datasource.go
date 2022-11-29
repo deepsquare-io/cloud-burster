@@ -158,10 +158,16 @@ func (s *DataSource) Create(
 	}
 	mask, _ := net.Mask.Size()
 
-	customConfig, err := yaml.Marshal(cloud.CustomConfig)
-	if err != nil {
-		return err
+	var customConfig []byte
+	if len(cloud.CustomConfig) == 0 {
+		customConfig = []byte{}
+	} else {
+		customConfig, err = yaml.Marshal(cloud.CustomConfig)
+		if err != nil {
+			return err
+		}
 	}
+
 	userData, err := GenerateCloudConfig(&CloudConfigOpts{
 		AuthorizedKeys:    cloud.AuthorizedKeys,
 		PostScripts:       cloud.PostScripts,
