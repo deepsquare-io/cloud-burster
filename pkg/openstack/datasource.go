@@ -293,12 +293,6 @@ func (s *DataSource) Create(
 	if err != nil {
 		return err
 	}
-	portID, err := s.CreatePort(host.IP, networkID, subnetID)
-	if err != nil {
-		return err
-	}
-	configDrive := true
-
 	var customConfig []byte
 	if len(cloud.CustomConfig) == 0 {
 		customConfig = []byte{}
@@ -319,6 +313,11 @@ func (s *DataSource) Create(
 	if err != nil {
 		return err
 	}
+	portID, err := s.CreatePort(host.IP, networkID, subnetID)
+	if err != nil {
+		return err
+	}
+	configDrive := true
 	server, err := bootfromvolume.Create(s.computeClient, bootfromvolume.CreateOptsExt{
 		CreateOptsBuilder: servers.CreateOpts{
 			Name:      host.Name,
