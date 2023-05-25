@@ -102,12 +102,11 @@ clouds:
       - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4'
     shadow:
       username: secret
-	    password: secret
-	    zone: zone
-	    sshKey: secret
+      password: secret
+      zone: zone
+      sshKey: secret
     postScripts:
       git:
         key: key
         url: git@github.com:SquareFactory/compute-configs.git
         ref: main
-
