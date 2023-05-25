@@ -369,15 +369,21 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 }
 
 func (s *DataSource) executePostcript(ctx context.Context, instance VM, userData []byte) error {
-	// Parse the private keys
-	signer, err := ssh.ParsePrivateKey([]byte(s.sshKey))
+	// Parse the private key
+	pk, err := base64.StdEncoding.DecodeString(s.sshKey)
+	if err != nil {
+		return err
+	}
+	signer, err := ssh.ParsePrivateKey(pk)
 	if err != nil {
 		return err
 	}
 
 	// SSH client configuration
 	config := &ssh.ClientConfig{
-		User: "root",
+		User:            "root",
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         10 * time.Second,
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		},
@@ -405,20 +411,11 @@ func (s *DataSource) executePostcript(ctx context.Context, instance VM, userData
 	defer session.Close()
 
 	// Create a temporary bash script file
-	script := "/tmp/postscript.sh"
-	err = session.Run(
-		fmt.Sprintf(
-			"echo '%s' > %s && chmod +x %s && %s",
-			string(userData),
-			script,
-			script,
-			script,
-		),
-	)
+	out, err := session.CombinedOutput(cloudConfigTemplate)
 	if err != nil {
-		return err
+		logger.I.Error("postscripts failed", zap.Error(err), zap.String("out", string(out)))
 	}
-	return nil
+	return err
 }
 
 // Format AuthorizedKeys to insert in http request body
