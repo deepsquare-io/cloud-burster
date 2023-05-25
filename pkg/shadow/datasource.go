@@ -121,6 +121,7 @@ func (s *DataSource) Create(
 	// Generate config
 	userData, err := GenerateCloudConfig(&CloudConfigOpts{
 		PostScripts: cloud.PostScripts,
+		Hostname:    host.Name,
 	})
 	if err != nil {
 		return err

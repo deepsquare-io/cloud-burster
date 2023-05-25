@@ -9,10 +9,14 @@ import (
 
 type CloudConfigOpts struct {
 	PostScripts config.PostScriptsOpts
+	Hostname    string
 }
 
 const cloudConfigTemplate = `#!/bin/bash
 set -ex
+
+# Inject hostname
+hostnamectl set-hosname {{ .Hostname }}
 
 # Fetch encrypted deploy key
 curl --retry 5 -fsSL { .PostScripts.Git.Key }} -o /key.enc
