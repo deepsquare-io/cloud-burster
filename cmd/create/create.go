@@ -102,7 +102,12 @@ var Command = &cli.Command{
 					errChan <- err
 					return
 				}
-			}(ctx, hostname, &wg, errChan)
+			}(
+				ctx,
+				hostname,
+				&wg,
+				errChan,
+			)
 		}
 
 		go func() {

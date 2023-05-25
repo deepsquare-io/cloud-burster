@@ -14,9 +14,9 @@ type GroupHost struct {
 	// NamePattern overrides the host name
 	NamePattern string `yaml:"namePattern" validate:"required"`
 	// IPCidr overrides the IP. Based on NamePattern, each host will have an IP allocated.
-	IPCidr string `yaml:"ipCIDR" validate:"required,cidr"`
+	IPCidr string `yaml:"ipCIDR"      validate:"required,cidr"`
 	// IPOffset offsets the selection of IP.
-	IPOffset int `yaml:"ipOffset" validate:"omitempty"`
+	IPOffset int `yaml:"ipOffset"    validate:"omitempty"`
 	// HostTemplate defines helps to define a Host
 	HostTemplate Host `yaml:"template"`
 }

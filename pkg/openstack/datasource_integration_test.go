@@ -151,7 +151,9 @@ func TestDataSourceTestSuite(t *testing.T) {
 	tenantID := os.Getenv("OS_PROJECT_ID")
 	domainID := os.Getenv("OS_PROJECT_DOMAIN_ID")
 	// Skip test if not defined
-	if user == "" || password == "" || endpoint == "" || tenantName == "" || tenantID == "" || region == "" || domainID == "" {
+	if user == "" || password == "" || endpoint == "" || tenantName == "" || tenantID == "" ||
+		region == "" ||
+		domainID == "" {
 		logger.I.Warn("mandatory variables are not set!")
 	} else {
 		suite.Run(t, &DataSourceTestSuite{

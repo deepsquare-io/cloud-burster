@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -85,12 +86,20 @@ func (s *DataSource) Create(
 			}
 		}`, NodeUUID)
 
-		req, err := http.NewRequestWithContext(ctx, "POST", listNode, strings.NewReader(requestBody))
+		req, err := http.NewRequestWithContext(
+			ctx,
+			"POST",
+			listNode,
+			strings.NewReader(requestBody),
+		)
 		if err != nil {
 			return VM{}, err
 		}
 
-		req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)))
+		req.Header.Set(
+			"Authorization",
+			"Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)),
+		)
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
@@ -127,7 +136,7 @@ func (s *DataSource) Create(
 		return err
 	}
 
-	if err := s.executePostcript(VM, userData); err != nil {
+	if err := s.executePostcript(ctx, VM, userData); err != nil {
 		logger.I.Error("failed to execute postcript", zap.Error(err))
 		return err
 	}
@@ -146,12 +155,20 @@ func (s *DataSource) CreateBlockDevice(ctx context.Context, host *config.Host) (
 		}
 	}`, s.zone, host.DiskSize)
 
-	req, err := http.NewRequestWithContext(ctx, "POST", requestStorage, strings.NewReader(requestBody))
+	req, err := http.NewRequestWithContext(
+		ctx,
+		"POST",
+		requestStorage,
+		strings.NewReader(requestBody),
+	)
 	if err != nil {
 		return "", err
 	}
 
-	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)))
+	req.Header.Set(
+		"Authorization",
+		"Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)),
+	)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -180,7 +197,12 @@ func (s *DataSource) CreateBlockDevice(ctx context.Context, host *config.Host) (
 }
 
 // CreateVM spawns a VM attached to a storage volume and returns its UUID
-func (s *DataSource) CreateVM(ctx context.Context, host *config.Host, cloud *config.Cloud, blockDeviceUUID string) (string, error) {
+func (s *DataSource) CreateVM(
+	ctx context.Context,
+	host *config.Host,
+	cloud *config.Cloud,
+	blockDeviceUUID string,
+) (string, error) {
 	requestBody := fmt.Sprintf(`{
 		"dry_run": false,
 		"pubkeys": [
@@ -205,7 +227,10 @@ func (s *DataSource) CreateVM(ctx context.Context, host *config.Host, cloud *con
 		return "", err
 	}
 
-	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)))
+	req.Header.Set(
+		"Authorization",
+		"Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)),
+	)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -248,7 +273,10 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 		return err
 	}
 
-	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)))
+	req.Header.Set(
+		"Authorization",
+		"Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)),
+	)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -288,7 +316,10 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 		return err
 	}
 
-	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)))
+	req.Header.Set(
+		"Authorization",
+		"Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)),
+	)
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -308,12 +339,20 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 		"dry_run": false
 	}`, storageUUID)
 
-	req, err = http.NewRequestWithContext(ctx, "POST", releaseStorage, strings.NewReader(requestBody))
+	req, err = http.NewRequestWithContext(
+		ctx,
+		"POST",
+		releaseStorage,
+		strings.NewReader(requestBody),
+	)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)))
+	req.Header.Set(
+		"Authorization",
+		"Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)),
+	)
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -329,7 +368,7 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 	return nil
 }
 
-func (s *DataSource) executePostcript(Instance VM, userData []byte) error {
+func (s *DataSource) executePostcript(ctx context.Context, instance VM, userData []byte) error {
 	// Parse the private keys
 	signer, err := ssh.ParsePrivateKey([]byte(s.sshKey))
 	if err != nil {
@@ -345,14 +384,21 @@ func (s *DataSource) executePostcript(Instance VM, userData []byte) error {
 	}
 
 	// Connect to the SSH server
-	conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:%s", Instance.PublicIP, Instance.SSHPort), config)
+	d := net.Dialer{Timeout: config.Timeout}
+	addr := fmt.Sprintf("%s:%s", instance.PublicIP, instance.SSHPort)
+	c, err := d.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer c.Close()
+	conn, chans, reqs, err := ssh.NewClientConn(c, addr, config)
+	if err != nil {
+		return err
+	}
+	client := ssh.NewClient(conn, chans, reqs)
 
 	// Create a new SSH session
-	session, err := conn.NewSession()
+	session, err := client.NewSession()
 	if err != nil {
 		return err
 	}
@@ -360,7 +406,15 @@ func (s *DataSource) executePostcript(Instance VM, userData []byte) error {
 
 	// Create a temporary bash script file
 	script := "/tmp/postscript.sh"
-	err = session.Run(fmt.Sprintf("echo '%s' > %s && chmod +x %s && %s", string(userData), script, script, script))
+	err = session.Run(
+		fmt.Sprintf(
+			"echo '%s' > %s && chmod +x %s && %s",
+			string(userData),
+			script,
+			script,
+			script,
+		),
+	)
 	if err != nil {
 		return err
 	}
