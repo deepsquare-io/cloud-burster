@@ -16,10 +16,10 @@ const cloudConfigTemplate = `#!/bin/bash
 set -ex
 
 # Inject hostname
-hostnamectl set-hosname {{ .Hostname }}
+hostnamectl set-hostname {{ .Hostname }}
 
 # Fetch encrypted deploy key
-curl --retry 5 -fsSL { .PostScripts.Git.Key }} -o /key.enc
+curl --retry 5 -fsSL {{ .PostScripts.Git.Key }} -o /key.enc
 chmod 600 /key.enc
 
 # Decrypt deploy key
