@@ -105,3 +105,9 @@ clouds:
 	    password: secret
 	    zone: zone
 	    sshKey: secret
+    postScripts:
+      git:
+        key: key
+        url: git@github.com:SquareFactory/compute-configs.git
+        ref: main
+

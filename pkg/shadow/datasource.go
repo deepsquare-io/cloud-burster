@@ -14,6 +14,7 @@ import (
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/squarefactory/cloud-burster/utils/try"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/ssh"
 )
 
 type DataSource struct {
@@ -21,6 +22,11 @@ type DataSource struct {
 	password string
 	zone     string
 	sshKey   string
+}
+
+type VM struct {
+	PublicIP string `json:"vm_public_ipv4"`
+	SSHPort  string `json:"vm_public_sshport"`
 }
 
 const (
@@ -72,7 +78,7 @@ func (s *DataSource) Create(
 	}
 
 	// Fetch public IP for provisioning
-	PublicIP, err := try.Do(func() (string, error) {
+	VM, err := try.Do(func() (VM, error) {
 		requestBody := fmt.Sprintf(`{
 			"filters": {
 				"uuid": "%s"
@@ -81,32 +87,30 @@ func (s *DataSource) Create(
 
 		req, err := http.NewRequestWithContext(ctx, "POST", listNode, strings.NewReader(requestBody))
 		if err != nil {
-			return "", err
+			return VM{}, err
 		}
 
 		req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)))
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			return "", err
+			return VM{}, err
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			return "", errors.New("failed to find public ip")
+			return VM{}, errors.New("failed to find public ip")
 		}
 		var response struct {
 			Filters bool `json:"filters"`
-			VM      struct {
-				PublicIP string `json:"vm_public_ipv4"`
-			} `json:"vms"`
+			VM      VM   `json:"vms"`
 		}
 
 		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-			return "", err
+			return VM{}, err
 		}
 
-		return response.VM.PublicIP, nil
+		return response.VM, nil
 	}, 10, 5*time.Second)
 
 	if err != nil {
@@ -114,7 +118,20 @@ func (s *DataSource) Create(
 		return err
 	}
 
-	logger.I.Info("spawned a server", zap.Any("publicip", PublicIP))
+	// Generate config
+	userData, err := GenerateCloudConfig(&CloudConfigOpts{
+		PostScripts: cloud.PostScripts,
+	})
+	if err != nil {
+		return err
+	}
+
+	if err := s.executePostcript(VM, userData); err != nil {
+		logger.I.Error("failed to execute postcript", zap.Error(err))
+		return err
+	}
+
+	logger.I.Info("spawned a server", zap.Any("vm", VM))
 	return nil
 }
 
@@ -308,6 +325,44 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 	}
 
 	logger.I.Warn("deleted a server", zap.Any("uuid", NodeUUID))
+	return nil
+}
+
+func (s *DataSource) executePostcript(Instance VM, userData []byte) error {
+	// Parse the private keys
+	signer, err := ssh.ParsePrivateKey([]byte(s.sshKey))
+	if err != nil {
+		return err
+	}
+
+	// SSH client configuration
+	config := &ssh.ClientConfig{
+		User: "root",
+		Auth: []ssh.AuthMethod{
+			ssh.PublicKeys(signer),
+		},
+	}
+
+	// Connect to the SSH server
+	conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:%s", Instance.PublicIP, Instance.SSHPort), config)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	// Create a new SSH session
+	session, err := conn.NewSession()
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+
+	// Create a temporary bash script file
+	script := "/tmp/postscript.sh"
+	err = session.Run(fmt.Sprintf("echo '%s' > %s && chmod +x %s && %s", string(userData), script, script, script))
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
