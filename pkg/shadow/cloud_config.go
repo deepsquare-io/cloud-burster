@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/squarefactory/cloud-burster/pkg/config"
 )
 
@@ -18,12 +19,9 @@ set -ex
 # Inject hostname
 hostnamectl set-hostname {{ .Hostname }}
 
-# Fetch encrypted deploy key
-curl --retry 5 -fsSL {{ .PostScripts.Git.Key }} -o /key.enc
-chmod 600 /key.enc
-
-# Decrypt deploy key
-echo "my_decrypt_password_is_long" | openssl aes-256-cbc -d -a -pbkdf2 -in /key.enc -out /key -pass stdin
+cat << 'EOF' > /key
+{{ .PostScripts.Git.Key | b64dec }}
+EOF
 chmod 600 /key
 
 # Cloning git repo containing postscripts.
@@ -33,14 +31,14 @@ if [ -f /configs/post.sh ] && [ -x /configs/post.sh ]; then
 	cd /configs || exit 1
 	./post.sh "$1"
 fi
-rm -f /key /key.env
+rm -f /key
 
 # Security
 chmod -R g-rwx,o-rwx .
 `
 
 func GenerateCloudConfig(options *CloudConfigOpts) ([]byte, error) {
-	t, err := template.New("cloud-config").Parse(cloudConfigTemplate)
+	t, err := template.New("cloud-config").Funcs(sprig.TxtFuncMap()).Parse(cloudConfigTemplate)
 	if err != nil {
 		return []byte{}, err
 	}

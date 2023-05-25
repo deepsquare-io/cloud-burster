@@ -18,7 +18,13 @@ func (suite *CloudConfigTestSuite) TestGenerateCloudConfig() {
 		Hostname: "test",
 		PostScripts: config.PostScriptsOpts{
 			Git: config.GitOpts{
-				Key: "key",
+				Key: `LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFB
+QUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhP
+UUFBQUNCWnVxejEzQS91MWtIcW1adEI4TjUzbmN5d0JqMC9kY2FXTWpabVFUcWVaZ0FBQUpCR1hX
+dEdSbDFyClJnQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDQlp1cXoxM0EvdTFrSHFtWnRCOE41M25j
+eXdCajAvZGNhV01qWm1RVHFlWmcKQUFBRURJL1RnVkp3M0FvUjA5bG52WDFZZVhPQWxlS1A2TGdh
+Vi9zRmhiaXRNLzBsbTZyUFhjRCs3V1FlcVptMEh3M25lZAp6TEFHUFQ5MXhwWXlObVpCT3A1bUFB
+QUFEVzFoY21OQWRIVnVaM04wWlc0PQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K`,
 				URL: "url",
 				Ref: "ref",
 			},
@@ -31,12 +37,16 @@ set -ex
 # Inject hostname
 hostnamectl set-hostname test
 
-# Fetch encrypted deploy key
-curl --retry 5 -fsSL key -o /key.enc
-chmod 600 /key.enc
+cat << 'EOF' > /key
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACBZuqz13A/u1kHqmZtB8N53ncywBj0/dcaWMjZmQTqeZgAAAJBGXWtGRl1r
+RgAAAAtzc2gtZWQyNTUxOQAAACBZuqz13A/u1kHqmZtB8N53ncywBj0/dcaWMjZmQTqeZg
+AAAEDI/TgVJw3AoR09lnvX1YeXOAleKP6LgaV/sFhbitM/0lm6rPXcD+7WQeqZm0Hw3ned
+zLAGPT91xpYyNmZBOp5mAAAADW1hcmNAdHVuZ3N0ZW4=
+-----END OPENSSH PRIVATE KEY-----
 
-# Decrypt deploy key
-echo "my_decrypt_password_is_long" | openssl aes-256-cbc -d -a -pbkdf2 -in /key.enc -out /key -pass stdin
+EOF
 chmod 600 /key
 
 # Cloning git repo containing postscripts.
@@ -46,7 +56,7 @@ if [ -f /configs/post.sh ] && [ -x /configs/post.sh ]; then
 	cd /configs || exit 1
 	./post.sh "$1"
 fi
-rm -f /key /key.env
+rm -f /key
 
 # Security
 chmod -R g-rwx,o-rwx .

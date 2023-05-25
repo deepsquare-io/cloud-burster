@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"go.uber.org/zap"
@@ -54,7 +55,8 @@ write_files:
 
 {{- if .PostScripts.Git.Key }}
   - path: /key
-    content: {{ .PostScripts.Git.Key }}
+    content: |-
+      {{ .PostScripts.Git.Key | nindent 6 }}
     encoding: b64
     permissions: '0600'
 {{- end }}
@@ -94,14 +96,18 @@ func validate(cloudConfig []byte) error {
 	m := make(map[interface{}]interface{})
 	err := yaml.Unmarshal(cloudConfig, &m)
 	if err != nil {
-		logger.I.Error("cloud config validation failed", zap.Error(err), zap.String("cloud-config", string(cloudConfig)))
+		logger.I.Error(
+			"cloud config validation failed",
+			zap.Error(err),
+			zap.String("cloud-config", string(cloudConfig)),
+		)
 		return fmt.Errorf("cloud config validation failed: %s", err.Error())
 	}
 	return nil
 }
 
 func GenerateCloudConfig(options *CloudConfigOpts) ([]byte, error) {
-	t, err := template.New("cloud-config").Parse(cloudConfigTemplate)
+	t, err := template.New("cloud-config").Funcs(sprig.TxtFuncMap()).Parse(cloudConfigTemplate)
 	if err != nil {
 		return []byte{}, err
 	}
