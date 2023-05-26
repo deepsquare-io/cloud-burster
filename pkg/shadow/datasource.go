@@ -1,7 +1,6 @@
 package shadow
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -71,40 +70,25 @@ func (s *DataSource) Create(
 
 	// Wait for block device to be allocated
 	_, err = try.Do(func() (string, error) {
-		// release storage
-		requestBody := fmt.Sprintf(`{
-			"filters": {
-				"uuid": "%s"
-			}
-		}`, StorageUUID)
 
-		req, err := http.NewRequestWithContext(
-			ctx,
-			"POST",
-			listStorage,
-			strings.NewReader(requestBody),
-		)
+		Filter := struct {
+			UUID string `json:"uuid"`
+		}{UUID: StorageUUID}
+
+		requestBody := struct {
+			Filters interface{} `json:"filters"`
+		}{Filters: Filter}
+
+		jsonBody, err := json.Marshal(requestBody)
 		if err != nil {
 			return "", err
 		}
 
-		req.Header.Set(
-			"Authorization",
-			"Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)),
-		)
-
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := s.InterrogateAPI(ctx, listStorage, jsonBody)
 		if err != nil {
 			return "", err
 		}
 		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return "", fmt.Errorf(
-				"failed to list block device: api responded with %d status code",
-				resp.StatusCode,
-			)
-		}
 
 		var response BlockDeviceListResponse
 		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
@@ -134,39 +118,28 @@ func (s *DataSource) Create(
 
 	// Fetch public IP for provisioning
 	VM, err := try.Do(func() (VM, error) {
-		requestBody := fmt.Sprintf(`{
-			"filters": {
-				"uuid": "%s"
-			}
-		}`, NodeUUID)
 
-		req, err := http.NewRequestWithContext(
-			ctx,
-			"POST",
-			listNode,
-			strings.NewReader(requestBody),
-		)
+		Filter := struct {
+			UUID string `json:"uuid"`
+		}{
+			UUID: NodeUUID,
+		}
+		requestBody := struct {
+			Filters interface{} `json:"filters"`
+		}{
+			Filters: Filter,
+		}
+
+		jsonBody, err := json.Marshal(requestBody)
 		if err != nil {
 			return VM{}, err
 		}
 
-		req.Header.Set(
-			"Authorization",
-			"Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)),
-		)
-
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := s.InterrogateAPI(ctx, listNode, jsonBody)
 		if err != nil {
 			return VM{}, err
 		}
 		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return VM{}, fmt.Errorf(
-				"failed to find public ip: api responded with %d status code",
-				resp.StatusCode,
-			)
-		}
 
 		var response VMListResponse
 		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
@@ -196,7 +169,7 @@ func (s *DataSource) Create(
 		return err
 	}
 
-	if err := s.executePostcript(ctx, VM, userData); err != nil {
+	if err := s.ExecutePostcript(ctx, VM, userData); err != nil {
 		logger.I.Error("failed to execute postcript", zap.Error(err))
 		return err
 	}
@@ -229,33 +202,11 @@ func (s *DataSource) CreateBlockDevice(ctx context.Context, host *config.Host) (
 		return "", err
 	}
 
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"POST",
-		requestStorage,
-		bytes.NewBuffer(jsonBody),
-	)
-	if err != nil {
-		return "", err
-	}
-
-	req.Header.Set(
-		"Authorization",
-		"Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)),
-	)
-
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := s.InterrogateAPI(ctx, requestStorage, jsonBody)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf(
-			"failed to create block device: api responded with %d status code",
-			resp.StatusCode,
-		)
-	}
 
 	var response struct {
 		BlockDevice struct {
@@ -314,29 +265,11 @@ func (s *DataSource) CreateVM(
 		return "", err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", requestNode, bytes.NewBuffer(jsonBody))
-	if err != nil {
-		return "", err
-	}
-
-	req.Header.Set(
-		"Authorization",
-		"Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)),
-	)
-
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := s.InterrogateAPI(ctx, requestNode, jsonBody)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		logger.I.Error("failed to create VM", zap.Any("string", resp.Body))
-		return "", fmt.Errorf(
-			"failed to create VM: api responded with %d error code",
-			resp.StatusCode,
-		)
-	}
 
 	var response struct {
 		DryRun bool `json:"dry_run"`
@@ -357,32 +290,30 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 
 	logger.I.Warn("Delete called", zap.String("uuid", NodeUUID))
 
-	// list to get block devices uuid
-	requestBody := fmt.Sprintf(`{
-		"filters": {
-			"uuid": "%s"
-		}
-	}`, NodeUUID)
+	Filter := struct {
+		UUID string `json:"uuid"`
+	}{
+		UUID: NodeUUID,
+	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", listNode, strings.NewReader(requestBody))
+	requestBody := struct {
+		Filters interface{} `json:"filters"`
+	}{
+		Filters: Filter,
+	}
+
+	jsonBody, err := json.Marshal(requestBody)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set(
-		"Authorization",
-		"Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)),
-	)
-
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := s.InterrogateAPI(ctx, listNode, jsonBody)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return errors.New("failed to list vms")
-	}
+	// list to get block devices uuid
 
 	var response VMListResponse
 
@@ -393,72 +324,64 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 	storageUUID := response.VMs[0].BlockDevices[0].UUID
 
 	// kill VM
-	requestBody = fmt.Sprintf(`{
-		"dry_run": false,
-		"vm": {
-			"uuid": "%s"
-		}
-	}`, NodeUUID)
+	VM := struct {
+		UUID string `json:"uuid"`
+	}{
+		UUID: NodeUUID,
+	}
 
-	req, err = http.NewRequestWithContext(ctx, "POST", killNode, strings.NewReader(requestBody))
+	requestBodyNode := struct {
+		DryRun bool        `json:"dry_run"`
+		VM     interface{} `json:"vm"`
+	}{
+		DryRun: false,
+		VM:     VM,
+	}
+
+	jsonBody, err = json.Marshal(requestBodyNode)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set(
-		"Authorization",
-		"Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)),
-	)
-
-	resp, err = http.DefaultClient.Do(req)
+	resp, err = s.InterrogateAPI(ctx, killNode, jsonBody)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return errors.New("failed to kill VM")
-	}
-
-	time.Sleep(10 * time.Second)
 	// release storage
-	requestBody = fmt.Sprintf(`{
-		"dry_run": false,
-		"block_device": {
-			"uuid": "%s"
-		}
-	}`, storageUUID)
+	time.Sleep(10 * time.Second)
 
-	req, err = http.NewRequestWithContext(
-		ctx,
-		"POST",
-		releaseStorage,
-		strings.NewReader(requestBody),
-	)
+	Block := struct {
+		UUID string `json:"uuid"`
+	}{
+		UUID: storageUUID,
+	}
+
+	requestBodyDev := struct {
+		DryRun bool        `json:"dry_run"`
+		Device interface{} `json:"block_device"`
+	}{
+		DryRun: false,
+		Device: Block,
+	}
+
+	jsonBody, err = json.Marshal(requestBodyDev)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set(
-		"Authorization",
-		"Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)),
-	)
-
-	resp, err = http.DefaultClient.Do(req)
+	resp, err = s.InterrogateAPI(ctx, releaseStorage, jsonBody)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return errors.New("failed to release storage")
-	}
+	resp.Body.Close()
 
 	logger.I.Warn("Deleted a server", zap.Any("uuid", NodeUUID))
 	return nil
 }
 
-func (s *DataSource) executePostcript(ctx context.Context, instance VM, userData []byte) error {
+func (s *DataSource) ExecutePostcript(ctx context.Context, instance VM, userData []byte) error {
 	// Parse the private key
 	pk, err := base64.StdEncoding.DecodeString(s.sshKey)
 	if err != nil {
@@ -506,4 +429,33 @@ func (s *DataSource) executePostcript(ctx context.Context, instance VM, userData
 		logger.I.Error("postscripts failed", zap.Error(err), zap.String("out", string(out)))
 	}
 	return err
+}
+
+func (s *DataSource) InterrogateAPI(ctx context.Context, endpoint string, jsonBody []byte) (*http.Response, error) {
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		"POST",
+		endpoint,
+		strings.NewReader(string(jsonBody)),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set(
+		"Authorization",
+		"Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)),
+	)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to interrogate api: responded with %d status code", resp.StatusCode)
+	}
+
+	return resp, nil
 }

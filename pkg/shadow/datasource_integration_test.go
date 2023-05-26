@@ -61,7 +61,7 @@ func (suite *DataSourceTestSuite) TestCreate() {
 }
 
 func (suite *DataSourceTestSuite) TestDelete() {
-	err := suite.impl.Delete(context.Background(), "25c6aab1-c6e6-4840-aa74-b413f7dec04b")
+	err := suite.impl.Delete(context.Background(), "2cca2979-71e3-4749-8c02-73f3038241a0")
 
 	suite.NoError(err)
 }
