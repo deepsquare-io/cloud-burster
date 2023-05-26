@@ -1,6 +1,7 @@
 package shadow
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -23,11 +24,6 @@ type DataSource struct {
 	password string
 	zone     string
 	sshKey   string
-}
-
-type VM struct {
-	PublicIP string `json:"vm_public_ipv4"`
-	SSHPort  string `json:"vm_public_sshport"`
 }
 
 const (
@@ -71,6 +67,8 @@ func (s *DataSource) Create(
 		return err
 	}
 
+	time.Sleep(1 * time.Second)
+
 	// Create VM
 	NodeUUID, err := s.CreateVM(ctx, host, cloud, StorageUUID)
 	if err != nil {
@@ -110,16 +108,13 @@ func (s *DataSource) Create(
 		if resp.StatusCode != http.StatusOK {
 			return VM{}, errors.New("failed to find public ip")
 		}
-		var response struct {
-			Filters bool `json:"filters"`
-			VM      VM   `json:"vms"`
-		}
 
+		var response Data
 		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 			return VM{}, err
 		}
 
-		return response.VM, nil
+		return response.VMs[0], nil
 	}, 10, 5*time.Second)
 
 	if err != nil {
@@ -147,19 +142,33 @@ func (s *DataSource) Create(
 
 // CreateBlockDevice creates a storage volume and returns its UUID
 func (s *DataSource) CreateBlockDevice(ctx context.Context, host *config.Host) (string, error) {
-	requestBody := fmt.Sprintf(`{
-		"dry_run": false,
-		"block_device": {
-			"datacenter_label": "%s",
-			"size_gib": %d
-		}
-	}`, s.zone, host.DiskSize)
+
+	blockDevice := struct {
+		DatacenterLabel string `json:"datacenter_label"`
+		Size            int    `json:"size_gib"`
+	}{
+		DatacenterLabel: s.zone,
+		Size:            host.DiskSize,
+	}
+
+	requestBody := struct {
+		DryRun      bool        `json:"dry_run"`
+		BlockDevice interface{} `json:"block_device"`
+	}{
+		DryRun:      false,
+		BlockDevice: blockDevice,
+	}
+
+	jsonBody, err := json.Marshal(requestBody)
+	if err != nil {
+		return "", err
+	}
 
 	req, err := http.NewRequestWithContext(
 		ctx,
 		"POST",
 		requestStorage,
-		strings.NewReader(requestBody),
+		bytes.NewBuffer(jsonBody),
 	)
 	if err != nil {
 		return "", err
@@ -177,12 +186,15 @@ func (s *DataSource) CreateBlockDevice(ctx context.Context, host *config.Host) (
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", errors.New("failed to create block device")
+		return "", fmt.Errorf(
+			"failed to create block device: api responded with %d status code",
+			resp.StatusCode,
+		)
 	}
 
 	var response struct {
 		BlockDevice struct {
-			Cost string `json:"cost"`
+			Cost int    `json:"cost"`
 			Size string `json:"gib_size"`
 			UUID string `json:"uuid"`
 		} `json:"block_device"`
@@ -203,26 +215,41 @@ func (s *DataSource) CreateVM(
 	cloud *config.Cloud,
 	blockDeviceUUID string,
 ) (string, error) {
-	requestBody := fmt.Sprintf(`{
-		"dry_run": false,
-		"pubkeys": [
-			%s
-		],
-		"vm": {
-			"sku": "%s",
-			"ram": 112,
-			"gpu": 1,
-			"image": "%s",
-			"block_devices": [
-				{
-					"uuid": "%s"
-				}
-			],
-			"vnc": true
-		}
-	// }`, strings.Join(formatPubKeys(cloud.AuthorizedKeys), ",\n"), host.FlavorName, host.ImageName, blockDeviceUUID)
 
-	req, err := http.NewRequestWithContext(ctx, "POST", requestNode, strings.NewReader(requestBody))
+	type BlockDevice struct {
+		UUID string `json:"uuid"`
+	}
+
+	Device := BlockDevice{UUID: blockDeviceUUID}
+
+	Instance := struct {
+		SKU         string      `json:"sku"`
+		RAM         int         `json:"ram"`
+		GPU         int         `json:"gpu"`
+		Image       string      `json:"image"`
+		BlockDevice interface{} `json:"block_devices"`
+	}{
+		SKU:         host.FlavorName,
+		RAM:         112,
+		GPU:         1,
+		Image:       host.ImageName,
+		BlockDevice: []BlockDevice{Device},
+	}
+
+	requestBody := struct {
+		DryRun bool        `json:"dry_run"`
+		VM     interface{} `json:"vm"`
+	}{
+		DryRun: false,
+		VM:     Instance,
+	}
+
+	jsonBody, err := json.Marshal(requestBody)
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", requestNode, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return "", err
 	}
@@ -239,7 +266,8 @@ func (s *DataSource) CreateVM(
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", errors.New("failed to create VM")
+		logger.I.Error("failed to create VM", zap.Any("string", resp.Body))
+		return "", fmt.Errorf("failed to create VM: api responded with %d error code", resp.StatusCode)
 	}
 
 	var response struct {
@@ -391,7 +419,7 @@ func (s *DataSource) executePostcript(ctx context.Context, instance VM, userData
 
 	// Connect to the SSH server
 	d := net.Dialer{Timeout: config.Timeout}
-	addr := fmt.Sprintf("%s:%s", instance.PublicIP, instance.SSHPort)
+	addr := fmt.Sprintf("%s:%d", instance.VMPublicIPv4, instance.VMPublicSSHPort)
 	c, err := d.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return err
@@ -416,13 +444,4 @@ func (s *DataSource) executePostcript(ctx context.Context, instance VM, userData
 		logger.I.Error("postscripts failed", zap.Error(err), zap.String("out", string(out)))
 	}
 	return err
-}
-
-// Format AuthorizedKeys to insert in http request body
-func formatPubKeys(pubkeys []string) []string {
-	formattedKeys := make([]string, len(pubkeys))
-	for i, key := range pubkeys {
-		formattedKeys[i] = fmt.Sprintf(`"%s"`, key)
-	}
-	return formattedKeys
 }
