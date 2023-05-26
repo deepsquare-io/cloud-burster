@@ -74,6 +74,12 @@ func (suite *DataSourceTestSuite) TestCreate() {
 
 }
 
+func (suite *DataSourceTestSuite) TestDelete() {
+	err := suite.impl.Delete(context.Background(), "1bb7faa0-3e78-4101-b7dd-43f3cd014e21")
+
+	suite.NoError(err)
+}
+
 func (suite *DataSourceTestSuite) BeforeTest(suiteName, testName string) {
 	suite.impl = shadow.New(
 		suite.username,
@@ -86,7 +92,7 @@ func TestDataSourceTestSuite(t *testing.T) {
 	username := "c_deepsquare_demo01"
 	password := "kN1wkkvhofvuXi@czukFtsrGtVU6SwVA"
 	zone := "camtl01"
-	sshKey := "-----BEGIN OPENSSH PRIVATE KEY-----b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZWQyNTUxOQAAACA3vHuWDLJFWghIjfbqmYbfpWHWVOpMARntU5rgOlowGQAAAJC5TLpguUy6YAAAAAtzc2gtZWQyNTUxOQAAACA3vHuWDLJFWghIjfbqmYbfpWHWVOpMARntU5rgOlowGQAAAEB2nasonYHV4ol3zAHeW5QR2dZZL7kJINO33HiFub7Qdze8e5YMskVaCEiN9uqZht+lYdZU6kwBGe1TmuA6WjAZAAAACXJvb3RAUDE0UwECAwQ=-----END OPENSSH PRIVATE KEY-----"
+	sshKey := "LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFBQUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhPUUFBQUNBM3ZIdVdETEpGV2doSWpmYnFtWWJmcFdIV1ZPcE1BUm50VTVyZ09sb3dHUUFBQUpDNVRMcGd1VXk2CllBQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDQTN2SHVXRExKRldnaElqZmJxbVliZnBXSFdWT3BNQVJudFU1cmdPbG93R1EKQUFBRUIybmFzb25ZSFY0b2wzekFIZVc1UVIyZFpaTDdrSklOTzMzSGlGdWI3UWR6ZThlNVlNc2tWYUNFaU45dXFaaHQrbApZZFpVNmt3QkdlMVRtdUE2V2pBWkFBQUFDWEp2YjNSQVVERTBVd0VDQXdRPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K"
 	// Skip test if not defined
 	if username == "" || password == "" || zone == "" || sshKey == "" {
 		logger.I.Warn("mandatory variables are not set!")

@@ -1,8 +1,11 @@
 package shadow
 
+type BlockDevice struct {
+	UUID string `json:"uuid"`
+}
 type VM struct {
 	AffectedOn       string        `json:"affected_on"`
-	BlockDevices     []interface{} `json:"block_devices"`
+	BlockDevices     []BlockDevice `json:"block_devices"`
 	DatacenterLabel  interface{}   `json:"datacenter_label"`
 	ID               int           `json:"id"`
 	Image            string        `json:"image"`
@@ -19,18 +22,14 @@ type VM struct {
 	VMCore           int           `json:"vm_core"`
 	VMCost           int           `json:"vm_cost"`
 	VMGPU            int           `json:"vm_gpu"`
-	VMPublicIPv4     interface{}   `json:"vm_public_ipv4"`
-	VMPublicSSHPort  interface{}   `json:"vm_public_sshport"`
+	VMPublicIPv4     string        `json:"vm_public_ipv4"`
+	VMPublicSSHPort  int           `json:"vm_public_sshport"`
 	VMRAM            int           `json:"vm_ram"`
 	VMSKU            string        `json:"vm_sku"`
 	VNC              bool          `json:"vnc"`
 }
 
-type Data struct {
+type ListResponse struct {
 	Filters struct{} `json:"filters"`
 	VMs     []VM     `json:"vms"`
-}
-
-type ListResponse struct {
-	Data Data
 }

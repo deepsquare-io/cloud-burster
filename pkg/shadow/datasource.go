@@ -67,7 +67,7 @@ func (s *DataSource) Create(
 		return err
 	}
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	// Create VM
 	NodeUUID, err := s.CreateVM(ctx, host, cloud, StorageUUID)
@@ -109,19 +109,24 @@ func (s *DataSource) Create(
 			return VM{}, errors.New("failed to find public ip")
 		}
 
-		var response Data
+		var response ListResponse
 		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 			return VM{}, err
 		}
 
+		if response.VMs[0].VMPublicIPv4 == "" && response.VMs[0].VMPublicSSHPort == 0 {
+			return VM{}, errors.New("instance has not been assigned an ip yet")
+		}
+
 		return response.VMs[0], nil
-	}, 10, 5*time.Second)
+	}, 10, 10*time.Second)
 
 	if err != nil {
 		logger.I.Error("failed to find public IP", zap.Error(err))
 		return err
 	}
 
+	fmt.Println(VM)
 	// Generate config
 	userData, err := GenerateCloudConfig(&CloudConfigOpts{
 		PostScripts: cloud.PostScripts,
@@ -316,20 +321,13 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 		return errors.New("failed to list vms")
 	}
 
-	var response struct {
-		Filters bool `json:"filters"`
-		VM      struct {
-			BlockDevice struct {
-				StorageUUID string `json:"uuid"`
-			} `json:"block_devices"`
-		} `json:"vms"`
-	}
+	var response ListResponse
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return err
 	}
 
-	storageUUID := response.VM.BlockDevice.StorageUUID
+	storageUUID := response.VMs[0].BlockDevices[0].UUID
 
 	// kill VM
 	requestBody = fmt.Sprintf(`{
@@ -359,12 +357,13 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 		return errors.New("failed to kill VM")
 	}
 
+	time.Sleep(10 * time.Second)
 	// release storage
 	requestBody = fmt.Sprintf(`{
+		"dry_run": false,
 		"block_device": {
 			"uuid": "%s"
-		},
-		"dry_run": false
+		}
 	}`, storageUUID)
 
 	req, err = http.NewRequestWithContext(
@@ -389,7 +388,7 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return errors.New("failed to kill VM")
+		return errors.New("failed to release storage")
 	}
 
 	logger.I.Warn("deleted a server", zap.Any("uuid", NodeUUID))
