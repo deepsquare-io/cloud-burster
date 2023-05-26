@@ -51,20 +51,6 @@ func (suite *DataSourceTestSuite) TestCreateBlockDevice() {
 	suite.NotEmpty(res)
 }
 
-func (suite *DataSourceTestSuite) TestCreateVM() {
-
-	//VolumeUUID, err := suite.impl.CreateBlockDevice(context.Background(), &host)
-	//suite.NoError(err)
-	//suite.NotEmpty(VolumeUUID)
-
-	// Act
-	res, err := suite.impl.CreateVM(context.Background(), &host, &cloud, "dc541777-ca8b-4e5f-93b0-12558c2af647")
-
-	// Assert
-	suite.NoError(err)
-	suite.NotEmpty(res)
-}
-
 func (suite *DataSourceTestSuite) TestCreate() {
 	// Act
 	err := suite.impl.Create(context.Background(), &host, &cloud)
@@ -75,7 +61,7 @@ func (suite *DataSourceTestSuite) TestCreate() {
 }
 
 func (suite *DataSourceTestSuite) TestDelete() {
-	err := suite.impl.Delete(context.Background(), "1bb7faa0-3e78-4101-b7dd-43f3cd014e21")
+	err := suite.impl.Delete(context.Background(), "25c6aab1-c6e6-4840-aa74-b413f7dec04b")
 
 	suite.NoError(err)
 }
@@ -98,7 +84,6 @@ func TestDataSourceTestSuite(t *testing.T) {
 		logger.I.Warn("mandatory variables are not set!")
 	} else {
 		suite.Run(t, &DataSourceTestSuite{
-
 			username: username,
 			password: password,
 			zone:     zone,

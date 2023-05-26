@@ -1,8 +1,34 @@
 package shadow
 
+import "time"
+
+// BlockDeviceList is the Block Device field in the response from the /block_device/list endpoint
+type BlockDeviceList struct {
+	AllocatedOn     *time.Time `json:"allocated_on"`
+	Cost            int        `json:"cost"`
+	DatacenterLabel string     `json:"datacenter_label"`
+	ID              int        `json:"id"`
+	InsertedOn      time.Time  `json:"inserted_on"`
+	Mount           bool       `json:"mount"`
+	ReleasedOn      *time.Time `json:"released_on"`
+	SizeGiB         int        `json:"size_gib"`
+	Status          int        `json:"status"`
+	StatusStr       string     `json:"status_str"`
+	UUID            string     `json:"uuid"`
+}
+
+// BlockDeviceListResponse is the response from the /block_device/list endpoint
+type BlockDeviceListResponse struct {
+	BlockDevices []BlockDeviceList `json:"block_devices"`
+	Filters      struct{}          `json:"filters"`
+}
+
+// BlockDevice is the Block Device field in the response from the /vm/list endpoint
 type BlockDevice struct {
 	UUID string `json:"uuid"`
 }
+
+// VM is the VM field from the /vm/list endpoint
 type VM struct {
 	AffectedOn       string        `json:"affected_on"`
 	BlockDevices     []BlockDevice `json:"block_devices"`
@@ -29,7 +55,8 @@ type VM struct {
 	VNC              bool          `json:"vnc"`
 }
 
-type ListResponse struct {
+// VMListResponse is the response from the /vm/list endpoint
+type VMListResponse struct {
 	Filters struct{} `json:"filters"`
 	VMs     []VM     `json:"vms"`
 }

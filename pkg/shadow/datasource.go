@@ -27,11 +27,13 @@ type DataSource struct {
 }
 
 const (
-	requestStorage = "https://api.shdw-ws.fr/api/block_device/request"
-	requestNode    = "https://api.shdw-ws.fr/api/vm/request"
-	listNode       = "https://api.shdw-ws.fr/api/vm/list"
-	killNode       = "https://api.shdw-ws.fr/api/vm/kill"
-	releaseStorage = "https://api.shdw-ws.fr/api/block_device/release"
+	requestStorage       = "https://api.shdw-ws.fr/api/block_device/request"
+	listStorage          = "https://api.shdw-ws.fr/api/block_device/list"
+	requestNode          = "https://api.shdw-ws.fr/api/vm/request"
+	listNode             = "https://api.shdw-ws.fr/api/vm/list"
+	killNode             = "https://api.shdw-ws.fr/api/vm/kill"
+	releaseStorage       = "https://api.shdw-ws.fr/api/block_device/release"
+	BlockDeviceAllocated = 2
 )
 
 func New(
@@ -48,7 +50,7 @@ func New(
 	}
 }
 
-// Create a shadow instance and returns its public IP
+// Create a shadow instance
 func (s *DataSource) Create(
 	ctx context.Context,
 	host *config.Host,
@@ -67,7 +69,61 @@ func (s *DataSource) Create(
 		return err
 	}
 
-	time.Sleep(5 * time.Second)
+	// Wait for block device to be allocated
+	_, err = try.Do(func() (string, error) {
+		// release storage
+		requestBody := fmt.Sprintf(`{
+			"filters": {
+				"uuid": "%s"
+			}
+		}`, StorageUUID)
+
+		req, err := http.NewRequestWithContext(
+			ctx,
+			"POST",
+			listStorage,
+			strings.NewReader(requestBody),
+		)
+		if err != nil {
+			return "", err
+		}
+
+		req.Header.Set(
+			"Authorization",
+			"Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)),
+		)
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return "", err
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return "", fmt.Errorf(
+				"failed to list block device: api responded with %d status code",
+				resp.StatusCode,
+			)
+		}
+
+		var response BlockDeviceListResponse
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			return "", err
+		}
+
+		if response.BlockDevices[0].Status != BlockDeviceAllocated {
+			return "", errors.New("block device has not been allocated yet")
+		}
+
+		return "", nil
+	}, 10, 2*time.Second)
+
+	if err != nil {
+		logger.I.Error("failed to find block device status", zap.Error(err))
+		return err
+	}
+
+	logger.I.Info("block device allocated, creating vm", zap.String("device uuid", StorageUUID))
 
 	// Create VM
 	NodeUUID, err := s.CreateVM(ctx, host, cloud, StorageUUID)
@@ -106,10 +162,13 @@ func (s *DataSource) Create(
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			return VM{}, errors.New("failed to find public ip")
+			return VM{}, fmt.Errorf(
+				"failed to find public ip: api responded with %d status code",
+				resp.StatusCode,
+			)
 		}
 
-		var response ListResponse
+		var response VMListResponse
 		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 			return VM{}, err
 		}
@@ -126,7 +185,8 @@ func (s *DataSource) Create(
 		return err
 	}
 
-	fmt.Println(VM)
+	logger.I.Info("instance has been assigned an ip, generating config", zap.String("ip", VM.VMPublicIPv4))
+
 	// Generate config
 	userData, err := GenerateCloudConfig(&CloudConfigOpts{
 		PostScripts: cloud.PostScripts,
@@ -272,7 +332,10 @@ func (s *DataSource) CreateVM(
 
 	if resp.StatusCode != http.StatusOK {
 		logger.I.Error("failed to create VM", zap.Any("string", resp.Body))
-		return "", fmt.Errorf("failed to create VM: api responded with %d error code", resp.StatusCode)
+		return "", fmt.Errorf(
+			"failed to create VM: api responded with %d error code",
+			resp.StatusCode,
+		)
 	}
 
 	var response struct {
@@ -321,7 +384,7 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 		return errors.New("failed to list vms")
 	}
 
-	var response ListResponse
+	var response VMListResponse
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return err
@@ -391,7 +454,7 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 		return errors.New("failed to release storage")
 	}
 
-	logger.I.Warn("deleted a server", zap.Any("uuid", NodeUUID))
+	logger.I.Warn("Deleted a server", zap.Any("uuid", NodeUUID))
 	return nil
 }
 
