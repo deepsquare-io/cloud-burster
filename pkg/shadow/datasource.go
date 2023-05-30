@@ -405,24 +405,33 @@ func (s *DataSource) ExecutePostcript(ctx context.Context, instance VM, userData
 	// Connect to the SSH server
 	d := net.Dialer{Timeout: config.Timeout}
 	addr := fmt.Sprintf("%s:%d", instance.VMPublicIPv4, instance.VMPublicSSHPort)
-	c, err := d.DialContext(ctx, "tcp", addr)
-	if err != nil {
-		return err
-	}
-	defer c.Close()
-	conn, chans, reqs, err := ssh.NewClientConn(c, addr, config)
-	if err != nil {
-		return err
-	}
-	client := ssh.NewClient(conn, chans, reqs)
 
-	// Create a new SSH session
-	session, err := client.NewSession()
+	session, err := try.Do(func() (*ssh.Session, error) {
+		c, err := d.DialContext(ctx, "tcp", addr)
+		if err != nil {
+			return nil, err
+		}
+		defer c.Close()
+		conn, chans, reqs, err := ssh.NewClientConn(c, addr, config)
+		if err != nil {
+			return nil, err
+		}
+		client := ssh.NewClient(conn, chans, reqs)
+
+		// Create a new SSH session
+		session, err := client.NewSession()
+		if err != nil {
+			return nil, err
+		}
+
+		return session, nil
+	}, 10, 2*time.Second)
+
 	if err != nil {
-		return err
+		logger.I.Error("failed to establish ssh session", zap.Error(err))
 	}
+
 	defer session.Close()
-
 	// Create a temporary bash script file
 	out, err := session.CombinedOutput(cloudConfigTemplate)
 	if err != nil {
