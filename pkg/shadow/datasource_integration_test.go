@@ -16,7 +16,6 @@ var (
 		DiskSize:   64,
 		FlavorName: "VM-A4500-7543P-R2",
 		ImageName:  "https://sos-ch-dk-2.exo.io/squareos-shadow/",
-		IP:         "",
 	}
 
 	cloud = config.Cloud{
@@ -26,8 +25,12 @@ var (
 			DNS:        "1.1.1.1",
 			Gateway:    "172.28.0.2",
 		},
-		AuthorizedKeys: []string{
-			"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
+		PostScripts: config.PostScriptsOpts{
+			Git: config.GitOpts{
+				Key: `LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFBQUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhPUUFBQUNEdXo5UmkwRndoUEhncnJDcmJPbkxWYkNoNDhCenhPSFZVSVJvaUhVR3V3d0FBQUpCK0IyRUlmZ2RoCkNBQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDRHV6OVJpMEZ3aFBIZ3JyQ3JiT25MVmJDaDQ4Qnp4T0hWVUlSb2lIVUd1d3cKQUFBRUFvTFI4b3liMW1mTktuRHZTOUVrMDJsVytldjJPZHlxWEw4aHphcW8xMWNPN1AxR0xRWENFOGVDdXNLdHM2Y3RWcwpLSGp3SFBFNGRWUWhHaUlkUWE3REFBQUFERzFoY21OQWJXRnlZeTF3WXdFPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K`,
+				URL: "git@github.com:SquareFactory/compute-configs.git",
+				Ref: "main",
+			},
 		},
 		Hosts: []config.Host{host},
 	}
@@ -61,7 +64,7 @@ func (suite *DataSourceTestSuite) TestCreate() {
 }
 
 func (suite *DataSourceTestSuite) TestDelete() {
-	err := suite.impl.Delete(context.Background(), "2cca2979-71e3-4749-8c02-73f3038241a0")
+	err := suite.impl.Delete(context.Background(), "2404fc69-bde4-4411-ba22-fe2074fbf200")
 
 	suite.NoError(err)
 }

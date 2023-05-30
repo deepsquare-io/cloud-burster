@@ -37,7 +37,7 @@ set -ex
 # Inject hostname
 hostnamectl set-hostname test
 
-cat << 'EOF' > /key
+cat << 'EOF' >> /key
 -----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
 QyNTUxOQAAACBZuqz13A/u1kHqmZtB8N53ncywBj0/dcaWMjZmQTqeZgAAAJBGXWtGRl1r

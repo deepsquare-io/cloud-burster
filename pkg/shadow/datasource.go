@@ -169,6 +169,7 @@ func (s *DataSource) Create(
 		return err
 	}
 
+	logger.I.Info("generated config, executing postcript")
 	if err := s.ExecutePostcript(ctx, VM, userData); err != nil {
 		logger.I.Error("failed to execute postcript", zap.Error(err))
 		return err
@@ -396,7 +397,7 @@ func (s *DataSource) ExecutePostcript(ctx context.Context, instance VM, userData
 	config := &ssh.ClientConfig{
 		User:            "root",
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         10 * time.Second,
+		Timeout:         60 * time.Second,
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		},
@@ -406,7 +407,7 @@ func (s *DataSource) ExecutePostcript(ctx context.Context, instance VM, userData
 	d := net.Dialer{Timeout: config.Timeout}
 	addr := fmt.Sprintf("%s:%d", instance.VMPublicIPv4, instance.VMPublicSSHPort)
 
-	session, err := try.Do(func() (*ssh.Session, error) {
+	out, err := try.Do(func() ([]byte, error) {
 		c, err := d.DialContext(ctx, "tcp", addr)
 		if err != nil {
 			return nil, err
@@ -423,21 +424,25 @@ func (s *DataSource) ExecutePostcript(ctx context.Context, instance VM, userData
 		if err != nil {
 			return nil, err
 		}
+		defer session.Close()
 
-		return session, nil
-	}, 10, 2*time.Second)
+		// Create a temporary bash script file
+		out, err := session.CombinedOutput(string(userData))
+		if err != nil {
+			logger.I.Error("postscripts failed", zap.Error(err), zap.String("out", string(out)))
+			return nil, err
+		}
+
+		return out, nil
+	}, 20, 20*time.Second)
 
 	if err != nil {
-		logger.I.Error("failed to establish ssh session", zap.Error(err))
+		logger.I.Error("failed to execute postcripts", zap.Error(err))
+		return err
 	}
 
-	defer session.Close()
-	// Create a temporary bash script file
-	out, err := session.CombinedOutput(cloudConfigTemplate)
-	if err != nil {
-		logger.I.Error("postscripts failed", zap.Error(err), zap.String("out", string(out)))
-	}
-	return err
+	logger.I.Info("successfully executed postcript", zap.Any("out", out))
+	return nil
 }
 
 func (s *DataSource) InterrogateAPI(ctx context.Context, endpoint string, jsonBody []byte) (*http.Response, error) {

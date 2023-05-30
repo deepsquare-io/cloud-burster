@@ -13,13 +13,13 @@ type CloudConfigOpts struct {
 	Hostname    string
 }
 
-const cloudConfigTemplate = `#!/bin/bash
+const cloudConfigTemplate = `#!/bin/sh
 set -ex
 
 # Inject hostname
 hostnamectl set-hostname {{ .Hostname }}
 
-cat << 'EOF' > /key
+cat << 'EOF' >> /key
 {{ .PostScripts.Git.Key | b64dec }}
 EOF
 chmod 600 /key
