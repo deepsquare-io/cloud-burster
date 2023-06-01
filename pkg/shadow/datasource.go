@@ -62,6 +62,7 @@ func (s *DataSource) Create(
 	)
 
 	// Create block device
+	logger.I.Info("creating a block device")
 	StorageUUID, err := s.CreateBlockDevice(ctx, host)
 	if err != nil {
 		logger.I.Error("failed to create block device", zap.Error(err))
@@ -158,7 +159,7 @@ func (s *DataSource) Create(
 		return err
 	}
 
-	logger.I.Info("instance has been assigned an ip, generating config", zap.String("ip", VM.VMPublicIPv4))
+	logger.I.Info("instance has been assigned an ip, generating config", zap.String("ip", VM.VMPublicIPv4), zap.Int("port", VM.VMPublicSSHPort))
 
 	// Generate config
 	userData, err := GenerateCloudConfig(&CloudConfigOpts{
@@ -169,7 +170,7 @@ func (s *DataSource) Create(
 		return err
 	}
 
-	logger.I.Info("generated config, executing postcript")
+	logger.I.Info("generated config, spamming ssh")
 	if err := s.ExecutePostcript(ctx, VM, userData); err != nil {
 		logger.I.Error("failed to execute postcript", zap.Error(err))
 		return err
@@ -397,7 +398,7 @@ func (s *DataSource) ExecutePostcript(ctx context.Context, instance VM, userData
 	config := &ssh.ClientConfig{
 		User:            "root",
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         60 * time.Second,
+		Timeout:         10 * time.Second,
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		},
@@ -426,6 +427,7 @@ func (s *DataSource) ExecutePostcript(ctx context.Context, instance VM, userData
 		}
 		defer session.Close()
 
+		logger.I.Info("ssh connection successful, executing postcripts")
 		// Create a temporary bash script file
 		out, err := session.CombinedOutput(string(userData))
 		if err != nil {
