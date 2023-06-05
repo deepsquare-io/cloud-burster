@@ -17,6 +17,7 @@ var cleanConfig = config.Config{
 	Clouds: []config.Cloud{
 		cleanOpenstackCloud,
 		cleanExoscaleCloud,
+		cleanShadowCloud,
 	},
 }
 

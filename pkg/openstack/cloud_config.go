@@ -53,7 +53,7 @@ write_files:
 {{- if .PostScripts.Git.Key }}
   - path: /key
     content: |-
-      {{ .PostScripts.Git.Key | nindent 6 }}
+      {{- .PostScripts.Git.Key | nindent 6 }}
     encoding: b64
     permissions: '0600'
 {{- end }}

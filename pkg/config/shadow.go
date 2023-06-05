@@ -6,7 +6,7 @@ type Shadow struct {
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
 	Zone     string `yaml:"zone"`
-	SSHKey   string `yaml:"sshkey"`
+	SSHKey   string `yaml:"sshKey"`
 }
 
 func (c *Shadow) Validate() error {

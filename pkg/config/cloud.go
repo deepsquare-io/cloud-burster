@@ -6,7 +6,7 @@ type Cloud struct {
 	AuthorizedKeys []string        `yaml:"authorizedKeys"`
 	PostScripts    PostScriptsOpts `yaml:"postScripts,omitempty"  validate:"omitempty"`
 	Type           string          `yaml:"type"                   validate:"required"`
-	Network        `yaml:"network" validate:"required"`
+	*Network       `yaml:"network,omitempty"`
 	GroupsHost     []GroupHost                 `yaml:"groupsHost,omitempty"   validate:"omitempty,dive"`
 	Hosts          []Host                      `yaml:"hosts,omitempty"        validate:"omitempty,dive"`
 	CustomConfig   map[interface{}]interface{} `yaml:"customConfig,omitempty" validate:"omitempty"`

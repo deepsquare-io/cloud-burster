@@ -101,10 +101,10 @@ clouds:
     authorizedKeys:
       - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4'
     shadow:
-      username: secret
-      password: secret
+      username: username
+      password: password
       zone: zone
-      sshKey: secret
+      sshKey: sshkey
     postScripts:
       git:
         key: key
