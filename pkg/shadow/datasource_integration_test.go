@@ -2,6 +2,7 @@ package shadow_test
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/squarefactory/cloud-burster/logger"
@@ -12,24 +13,18 @@ import (
 
 var (
 	host = config.Host{
-		Name:       "delete-me-integration-test",
+		Name:       "cn1.ca-bhs-5.deepsquare.run",
 		DiskSize:   64,
 		FlavorName: "VM-A4500-7543P-R2",
 		ImageName:  "https://sos-ch-dk-2.exo.io/squareos-shadow/",
 	}
 
 	cloud = config.Cloud{
-		Network: config.Network{
-			Name:       "cf-net",
-			SubnetCIDR: "172.28.0.0/20",
-			DNS:        "1.1.1.1",
-			Gateway:    "172.28.0.2",
-		},
 		PostScripts: config.PostScriptsOpts{
 			Git: config.GitOpts{
-				Key: `LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFBQUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhPUUFBQUNEdXo5UmkwRndoUEhncnJDcmJPbkxWYkNoNDhCenhPSFZVSVJvaUhVR3V3d0FBQUpCK0IyRUlmZ2RoCkNBQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDRHV6OVJpMEZ3aFBIZ3JyQ3JiT25MVmJDaDQ4Qnp4T0hWVUlSb2lIVUd1d3cKQUFBRUFvTFI4b3liMW1mTktuRHZTOUVrMDJsVytldjJPZHlxWEw4aHphcW8xMWNPN1AxR0xRWENFOGVDdXNLdHM2Y3RWcwpLSGp3SFBFNGRWUWhHaUlkUWE3REFBQUFERzFoY21OQWJXRnlZeTF3WXdFPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K`,
+				Key: os.Getenv("POSTCRIPTS_KEY"),
 				URL: "git@github.com:SquareFactory/compute-configs.git",
-				Ref: "main",
+				Ref: "shadow",
 			},
 		},
 		Hosts: []config.Host{host},
@@ -64,7 +59,7 @@ func (suite *DataSourceTestSuite) TestCreate() {
 }
 
 func (suite *DataSourceTestSuite) TestDelete() {
-	err := suite.impl.Delete(context.Background(), "2404fc69-bde4-4411-ba22-fe2074fbf200")
+	err := suite.impl.Delete(context.Background(), "de505a71-8a6c-43d9-b153-321931c345ff")
 
 	suite.NoError(err)
 }
@@ -78,10 +73,10 @@ func (suite *DataSourceTestSuite) BeforeTest(suiteName, testName string) {
 	)
 }
 func TestDataSourceTestSuite(t *testing.T) {
-	username := "c_deepsquare_demo01"
-	password := "kN1wkkvhofvuXi@czukFtsrGtVU6SwVA"
-	zone := "camtl01"
-	sshKey := "LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFBQUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhPUUFBQUNBM3ZIdVdETEpGV2doSWpmYnFtWWJmcFdIV1ZPcE1BUm50VTVyZ09sb3dHUUFBQUpDNVRMcGd1VXk2CllBQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDQTN2SHVXRExKRldnaElqZmJxbVliZnBXSFdWT3BNQVJudFU1cmdPbG93R1EKQUFBRUIybmFzb25ZSFY0b2wzekFIZVc1UVIyZFpaTDdrSklOTzMzSGlGdWI3UWR6ZThlNVlNc2tWYUNFaU45dXFaaHQrbApZZFpVNmt3QkdlMVRtdUE2V2pBWkFBQUFDWEp2YjNSQVVERTBVd0VDQXdRPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K"
+	username := os.Getenv("BHS_USER")
+	password := os.Getenv("BHS_PASSWORD")
+	zone := os.Getenv("BHS_ZONE")
+	sshKey := os.Getenv("BHS_KEY")
 	// Skip test if not defined
 	if username == "" || password == "" || zone == "" || sshKey == "" {
 		logger.I.Warn("mandatory variables are not set!")
