@@ -13,7 +13,7 @@ type CloudConfigOpts struct {
 	Hostname    string
 }
 
-const cloudConfigTemplate = `#!/bin/sh
+const cloudConfigTemplate = `#!/bin/bash
 set -ex
 
 # Inject hostname

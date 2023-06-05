@@ -1,3 +1,5 @@
+//go:build integration
+
 package shadow_test
 
 import (
