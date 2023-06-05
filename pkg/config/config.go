@@ -27,8 +27,8 @@ func init() {
 }
 
 type Config struct {
-	APIVersion   string   `yaml:"apiVersion" validate:"equalAPI"`
-	Clouds       []Cloud  `yaml:"clouds" validate:"dive"`
+	APIVersion   string   `yaml:"apiVersion"   validate:"equalAPI"`
+	Clouds       []Cloud  `yaml:"clouds"       validate:"dive"`
 	SuffixSearch []string `yaml:"suffixSearch"`
 }
 

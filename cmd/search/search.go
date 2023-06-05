@@ -89,7 +89,12 @@ var Command = &cli.Command{
 					zap.Any("host", host),
 					zap.Any("cloud", cl),
 				)
-			}(ctx, hostname, &wg, errChan)
+			}(
+				ctx,
+				hostname,
+				&wg,
+				errChan,
+			)
 		}
 
 		go func() {

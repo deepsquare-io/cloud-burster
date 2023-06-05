@@ -8,6 +8,7 @@ import (
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/squarefactory/cloud-burster/pkg/exoscale"
 	"github.com/squarefactory/cloud-burster/pkg/openstack"
+	"github.com/squarefactory/cloud-burster/pkg/shadow"
 	"go.uber.org/zap"
 )
 
@@ -41,6 +42,13 @@ func New(conf *config.Cloud) (DataSource, error) {
 			conf.Exoscale.APIKey,
 			conf.Exoscale.APISecret,
 			conf.Exoscale.Zone,
+		), nil
+	case "shadow":
+		return shadow.New(
+			conf.Shadow.Username,
+			conf.Shadow.Password,
+			conf.Shadow.Zone,
+			conf.Shadow.SSHKey,
 		), nil
 	}
 

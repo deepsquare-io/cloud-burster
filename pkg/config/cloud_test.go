@@ -20,7 +20,7 @@ var cleanOpenstackCloud = config.Cloud{
 			Ref: "main",
 		},
 	},
-	Network: cleanNetwork,
+	Network: &cleanNetwork,
 	Hosts: []config.Host{
 		cleanHost,
 	},
@@ -50,7 +50,7 @@ var cleanExoscaleCloud = config.Cloud{
 			Ref: "main",
 		},
 	},
-	Network: cleanNetwork,
+	Network: &cleanNetwork,
 	Hosts: []config.Host{
 		cleanHost,
 	},
@@ -69,6 +69,31 @@ var cleanExoscaleCloud = config.Cloud{
 	Exoscale: &cleanExoscale,
 }
 
+var cleanShadowCloud = config.Cloud{
+	AuthorizedKeys: []string{
+		"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
+	},
+	PostScripts: config.PostScriptsOpts{
+		Git: config.GitOpts{
+			Key: "key",
+			URL: "git@github.com:SquareFactory/compute-configs.git",
+			Ref: "main",
+		},
+	},
+	Hosts: []config.Host{
+		{
+			Name:       "host",
+			DiskSize:   50,
+			FlavorName: "VM-A4500-7543P-R2",
+			ImageName:  "https://example.exo.io/ubuntu/",
+		},
+	},
+	GroupsHost:   nil,
+	CustomConfig: nil,
+	Type:         "shadow",
+	Shadow:       &cleanShadow,
+}
+
 type CloudTestSuite struct {
 	suite.Suite
 }
@@ -83,21 +108,6 @@ func (suite *CloudTestSuite) TestValidate() {
 		{
 			input: &cleanOpenstackCloud,
 			title: "Positive test",
-		},
-		{
-			isError: true,
-			errorContains: []string{
-				"required",
-				"Network",
-			},
-			input: &config.Cloud{
-				AuthorizedKeys: cleanOpenstackCloud.AuthorizedKeys,
-				PostScripts:    cleanOpenstackCloud.PostScripts,
-				GroupsHost:     cleanOpenstackCloud.GroupsHost,
-				Openstack:      cleanOpenstackCloud.Openstack,
-				Type:           cleanOpenstackCloud.Type,
-			},
-			title: "Network required/valid",
 		},
 		{
 			isError: true,
