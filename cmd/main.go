@@ -52,7 +52,7 @@ var flags = []cli.Flag{
 var app = &cli.App{
 	Name:    "cloud-burster",
 	Usage:   "Burst into the cloud.",
-	Version: "0.2.3",
+	Version: "0.2.3-dev",
 	Flags:   flags,
 	Commands: []*cli.Command{
 		create.Command,
