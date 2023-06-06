@@ -6,19 +6,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/config"
+	"github.com/squarefactory/cloud-burster/pkg/middlewares"
 	"github.com/squarefactory/cloud-burster/utils/try"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
 
 type DataSource struct {
+	http.Client
 	username string
 	password string
 	zone     string
@@ -41,12 +45,16 @@ func New(
 	zone string,
 	sshKey string,
 ) *DataSource {
-	return &DataSource{
+	s := &DataSource{
 		username: username,
 		password: password,
 		zone:     zone,
 		sshKey:   sshKey,
 	}
+	s.Client.Transport = &middlewares.RoundTripper{
+		RoundTripper: http.DefaultTransport,
+	}
+	return s
 }
 
 // Create a shadow instance
@@ -90,6 +98,16 @@ func (s *DataSource) Create(
 			return "", err
 		}
 		defer resp.Body.Close()
+
+		if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+			body, _ := io.ReadAll(resp.Body)
+			logger.I.Error(
+				"shadow API returned non-ok code",
+				zap.Int("status code", resp.StatusCode),
+				zap.String("body", string(body)),
+			)
+			return "", fmt.Errorf("shadow API returned non-ok code: %d", resp.StatusCode)
+		}
 
 		var response BlockDeviceListResponse
 		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
@@ -141,6 +159,16 @@ func (s *DataSource) Create(
 			return VM{}, err
 		}
 		defer resp.Body.Close()
+
+		if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+			body, _ := io.ReadAll(resp.Body)
+			logger.I.Error(
+				"shadow API returned non-ok code",
+				zap.Int("status code", resp.StatusCode),
+				zap.String("body", string(body)),
+			)
+			return VM{}, fmt.Errorf("shadow API returned non-ok code: %d", resp.StatusCode)
+		}
 
 		var response VMListResponse
 		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
@@ -214,6 +242,16 @@ func (s *DataSource) CreateBlockDevice(ctx context.Context, host *config.Host) (
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		logger.I.Error(
+			"shadow API returned non-ok code",
+			zap.Int("status code", resp.StatusCode),
+			zap.String("body", string(body)),
+		)
+		return "", fmt.Errorf("shadow API returned non-ok code: %d", resp.StatusCode)
+	}
+
 	var response struct {
 		BlockDevice struct {
 			Cost int    `json:"cost"`
@@ -237,6 +275,18 @@ func (s *DataSource) CreateVM(
 	cloud *config.Cloud,
 	blockDeviceUUID string,
 ) (string, error) {
+	type RequestBodyVM struct {
+		SKU         string      `json:"sku"`
+		RAM         int         `json:"ram"`
+		GPU         int         `json:"gpu"`
+		Image       string      `json:"image"`
+		BlockDevice interface{} `json:"block_devices"`
+	}
+
+	type RequestBody struct {
+		DryRun bool          `json:"dry_run"`
+		VM     RequestBodyVM `json:"vm"`
+	}
 
 	type BlockDevice struct {
 		UUID string `json:"uuid"`
@@ -244,26 +294,24 @@ func (s *DataSource) CreateVM(
 
 	Device := BlockDevice{UUID: blockDeviceUUID}
 
-	Instance := struct {
-		SKU         string      `json:"sku"`
-		RAM         int         `json:"ram"`
-		GPU         int         `json:"gpu"`
-		Image       string      `json:"image"`
-		BlockDevice interface{} `json:"block_devices"`
-	}{
-		SKU:         host.FlavorName,
-		RAM:         112,
-		GPU:         1,
-		Image:       host.ImageName,
-		BlockDevice: []BlockDevice{Device},
+	url, err := url.Parse(host.ImageName)
+	if err != nil {
+		return "", fmt.Errorf("url failed to parse: %w", err)
 	}
+	q := url.Query()
+	q.Add("hostname", host.Name)
+	url.RawQuery = q.Encode()
+	fmt.Println(url)
 
-	requestBody := struct {
-		DryRun bool        `json:"dry_run"`
-		VM     interface{} `json:"vm"`
-	}{
+	requestBody := RequestBody{
 		DryRun: false,
-		VM:     Instance,
+		VM: RequestBodyVM{
+			SKU:         host.FlavorName,
+			RAM:         112,
+			GPU:         1,
+			Image:       url.String(),
+			BlockDevice: []BlockDevice{Device},
+		},
 	}
 
 	jsonBody, err := json.Marshal(requestBody)
@@ -276,6 +324,16 @@ func (s *DataSource) CreateVM(
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		logger.I.Error(
+			"shadow API returned non-ok code",
+			zap.Int("status code", resp.StatusCode),
+			zap.String("body", string(body)),
+		)
+		return "", fmt.Errorf("shadow API returned non-ok code: %d", resp.StatusCode)
+	}
 
 	var response struct {
 		DryRun bool `json:"dry_run"`
@@ -291,55 +349,83 @@ func (s *DataSource) CreateVM(
 	return response.VM.UUID, nil
 }
 
-// Delete a server
-func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
-
-	logger.I.Warn("Delete called", zap.String("uuid", NodeUUID))
-
-	Filter := struct {
-		UUID string `json:"uuid"`
-	}{
-		UUID: NodeUUID,
-	}
-
+func (s *DataSource) FindVM(ctx context.Context, name string) (VM, error) {
 	requestBody := struct {
-		Filters interface{} `json:"filters"`
-	}{
-		Filters: Filter,
-	}
+		Filters struct {
+			UUID *string `json:"uuid,omitempty"`
+		} `json:"filters"`
+	}{}
 
 	jsonBody, err := json.Marshal(requestBody)
 	if err != nil {
-		return err
+		return VM{}, err
 	}
 
 	resp, err := s.InterrogateAPI(ctx, listNode, jsonBody)
 	if err != nil {
-		return err
+		return VM{}, err
 	}
 	defer resp.Body.Close()
 
-	// list to get block devices uuid
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		logger.I.Error(
+			"shadow API returned non-ok code",
+			zap.Int("status code", resp.StatusCode),
+			zap.String("body", string(body)),
+		)
+		return VM{}, fmt.Errorf("shadow API returned non-ok code: %d", resp.StatusCode)
+	}
 
+	// list to get block devices uuid
 	var response VMListResponse
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return err
+		return VM{}, err
 	}
 
 	if len(response.VMs) <= 0 {
-		return errors.New("VM not found")
+		return VM{}, fmt.Errorf("VM not found: %v", name)
 	}
-	if len(response.VMs[0].BlockDevices) <= 0 {
-		return errors.New("BlockDevice not found")
+	var vm VM
+	var insertTime time.Time
+	for _, v := range response.VMs {
+		vInsertTime, err := time.Parse(time.RFC3339, v.InsertedOn)
+		if err != nil {
+			logger.I.Error("failed to parse insert time", zap.Error(err))
+			continue
+		}
+		url, err := url.Parse(v.Image)
+		if err != nil {
+			logger.I.Error("failed to parse url", zap.Error(err))
+			continue
+		}
+		if url.Query().Get("hostname") == name && vInsertTime.After(insertTime) {
+			vm = v
+			insertTime = vInsertTime
+		}
 	}
-	storageUUID := response.VMs[0].BlockDevices[0].UUID
+	if len(vm.BlockDevices) <= 0 {
+		return VM{}, fmt.Errorf("BlockDevice not found: %v", vm)
+	}
+	logger.I.Debug("found VM", zap.Any("vm", vm))
+	return vm, nil
+}
+
+// Delete a server
+func (s *DataSource) Delete(ctx context.Context, name string) error {
+	logger.I.Warn("Delete called", zap.String("name", name))
+
+	vm, err := s.FindVM(ctx, name)
+	if err != nil {
+		return err
+	}
 
 	// kill VM
 	VM := struct {
 		UUID string `json:"uuid"`
 	}{
-		UUID: NodeUUID,
+		UUID: vm.UUID,
 	}
 
 	requestBodyNode := struct {
@@ -350,16 +436,27 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 		VM:     VM,
 	}
 
-	jsonBody, err = json.Marshal(requestBodyNode)
+	jsonBody, err := json.Marshal(requestBodyNode)
 	if err != nil {
 		return err
 	}
 
-	resp, err = s.InterrogateAPI(ctx, killNode, jsonBody)
+	resp, err := s.InterrogateAPI(ctx, killNode, jsonBody)
 	if err != nil {
-		return err
+		logger.I.Error("failed to kill node", zap.Error(err))
+	} else {
+		defer resp.Body.Close()
+
+		if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+			body, _ := io.ReadAll(resp.Body)
+			logger.I.Error(
+				"shadow API returned non-ok code",
+				zap.Int("status code", resp.StatusCode),
+				zap.String("body", string(body)),
+			)
+			logger.I.Error("shadow API returned non-ok code", zap.Int("status", resp.StatusCode))
+		}
 	}
-	resp.Body.Close()
 
 	// release storage
 	time.Sleep(10 * time.Second)
@@ -367,7 +464,7 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 	Block := struct {
 		UUID string `json:"uuid"`
 	}{
-		UUID: storageUUID,
+		UUID: vm.BlockDevices[0].UUID,
 	}
 
 	requestBodyDev := struct {
@@ -387,9 +484,19 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
 
-	logger.I.Warn("Deleted a server", zap.Any("uuid", NodeUUID))
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		logger.I.Error(
+			"shadow API returned non-ok code",
+			zap.Int("status code", resp.StatusCode),
+			zap.String("body", string(body)),
+		)
+		return fmt.Errorf("shadow API returned non-ok code: %d", resp.StatusCode)
+	}
+
+	logger.I.Warn("Deleted a server", zap.Any("name", name))
 	return nil
 }
 
@@ -477,18 +584,10 @@ func (s *DataSource) InterrogateAPI(
 		"Authorization",
 		"Basic "+base64.StdEncoding.EncodeToString([]byte(s.username+":"+s.password)),
 	)
+	req.Header.Set(
+		"Content-Type",
+		"application/json",
+	)
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(
-			"failed to interrogate api: responded with %d status code",
-			resp.StatusCode,
-		)
-	}
-
-	return resp, nil
+	return s.Do(req)
 }

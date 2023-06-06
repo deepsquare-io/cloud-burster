@@ -94,17 +94,17 @@ jobs:
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         run: make build-all -j$(nproc)
 
-      - name: Build with tag
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          TAG_NAME: ${{ steps.branch_name.outputs.TAG_NAME }}
-        run: make build-all -j$(nproc)
-
       - name: Branch name
         if: startsWith(github.ref, 'refs/tags/')
         id: branch_name
         run: |
           echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build with tag
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          VERSION: ${{ steps.branch_name.outputs.TAG_NAME }}
+        run: make build-all -j$(nproc)
 
       - name: Get the oci compatible version
         if: startsWith(github.ref, 'refs/tags/')

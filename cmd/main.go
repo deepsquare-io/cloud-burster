@@ -13,6 +13,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var version = "dev"
+
 var flags = []cli.Flag{
 	&cli.StringFlag{
 		Name:  "config.path",
@@ -52,7 +54,7 @@ var flags = []cli.Flag{
 var app = &cli.App{
 	Name:    "cloud-burster",
 	Usage:   "Burst into the cloud.",
-	Version: "0.2.3-dev",
+	Version: version,
 	Flags:   flags,
 	Commands: []*cli.Command{
 		create.Command,

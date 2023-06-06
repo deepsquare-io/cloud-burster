@@ -27,7 +27,7 @@ var cleanOpenstackCloud = config.Cloud{
 	GroupsHost: []config.GroupHost{
 		cleanGroupHost,
 	},
-	CustomConfig: map[interface{}]interface{}{
+	CustomConfig: map[string]interface{}{
 		"users": []interface{}{
 			map[string]interface{}{
 				"name":   "user",
@@ -57,7 +57,7 @@ var cleanExoscaleCloud = config.Cloud{
 	GroupsHost: []config.GroupHost{
 		cleanGroupHost,
 	},
-	CustomConfig: map[interface{}]interface{}{
+	CustomConfig: map[string]interface{}{
 		"users": []interface{}{
 			map[string]interface{}{
 				"name":   "user",
