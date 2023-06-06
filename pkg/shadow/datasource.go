@@ -159,7 +159,11 @@ func (s *DataSource) Create(
 		return err
 	}
 
-	logger.I.Info("instance has been assigned an ip, generating config", zap.String("ip", VM.VMPublicIPv4), zap.Int("port", VM.VMPublicSSHPort))
+	logger.I.Info(
+		"instance has been assigned an ip, generating config",
+		zap.String("ip", VM.VMPublicIPv4),
+		zap.Int("port", VM.VMPublicSSHPort),
+	)
 
 	// Generate config
 	userData, err := GenerateCloudConfig(&CloudConfigOpts{
@@ -323,6 +327,12 @@ func (s *DataSource) Delete(ctx context.Context, NodeUUID string) error {
 		return err
 	}
 
+	if len(response.VMs) <= 0 {
+		return errors.New("VM not found")
+	}
+	if len(response.VMs[0].BlockDevices) <= 0 {
+		return errors.New("BlockDevice not found")
+	}
 	storageUUID := response.VMs[0].BlockDevices[0].UUID
 
 	// kill VM
@@ -447,7 +457,11 @@ func (s *DataSource) ExecutePostcript(ctx context.Context, instance VM, userData
 	return nil
 }
 
-func (s *DataSource) InterrogateAPI(ctx context.Context, endpoint string, jsonBody []byte) (*http.Response, error) {
+func (s *DataSource) InterrogateAPI(
+	ctx context.Context,
+	endpoint string,
+	jsonBody []byte,
+) (*http.Response, error) {
 
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -470,7 +484,10 @@ func (s *DataSource) InterrogateAPI(ctx context.Context, endpoint string, jsonBo
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to interrogate api: responded with %d status code", resp.StatusCode)
+		return nil, fmt.Errorf(
+			"failed to interrogate api: responded with %d status code",
+			resp.StatusCode,
+		)
 	}
 
 	return resp, nil
