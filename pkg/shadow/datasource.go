@@ -203,7 +203,7 @@ func (s *DataSource) Create(
 	}
 
 	logger.I.Info("generated config, spamming ssh")
-	if err := s.ExecutePostcript(ctx, VM, userData); err != nil {
+	if err := s.ExecutePostcript(ctx, host, VM, userData); err != nil {
 		logger.I.Error("failed to execute postcript", zap.Error(err))
 		return err
 	}
@@ -276,11 +276,12 @@ func (s *DataSource) CreateVM(
 	blockDeviceUUID string,
 ) (string, error) {
 	type RequestBodyVM struct {
-		SKU         string      `json:"sku"`
-		RAM         int         `json:"ram"`
-		GPU         int         `json:"gpu"`
-		Image       string      `json:"image"`
-		BlockDevice interface{} `json:"block_devices"`
+		SKU           string      `json:"sku"`
+		RAM           int         `json:"ram"`
+		GPU           int         `json:"gpu"`
+		Image         string      `json:"image"`
+		BlockDevice   interface{} `json:"block_devices"`
+		Interruptible bool        `json:"interruptible"`
 	}
 
 	type RequestBody struct {
@@ -303,14 +304,16 @@ func (s *DataSource) CreateVM(
 	url.RawQuery = q.Encode()
 	fmt.Println(url)
 
+	// TODO: do not hardcode resources
 	requestBody := RequestBody{
 		DryRun: false,
 		VM: RequestBodyVM{
-			SKU:         host.FlavorName,
-			RAM:         112,
-			GPU:         1,
-			Image:       url.String(),
-			BlockDevice: []BlockDevice{Device},
+			SKU:           host.FlavorName,
+			RAM:           128,
+			GPU:           1,
+			Image:         url.String(),
+			BlockDevice:   []BlockDevice{Device},
+			Interruptible: true,
 		},
 	}
 
@@ -332,6 +335,9 @@ func (s *DataSource) CreateVM(
 			zap.Int("status code", resp.StatusCode),
 			zap.String("body", string(body)),
 		)
+		if err := s.DeleteBlockDevice(ctx, DeleteBlockDeviceRequest{blockDeviceUUID}); err != nil {
+			logger.I.Error(err.Error())
+		}
 		return "", fmt.Errorf("shadow API returned non-ok code: %d", resp.StatusCode)
 	}
 
@@ -343,6 +349,9 @@ func (s *DataSource) CreateVM(
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		if err := s.DeleteBlockDevice(ctx, DeleteBlockDeviceRequest{blockDeviceUUID}); err != nil {
+			logger.I.Error(err.Error())
+		}
 		return "", err
 	}
 
@@ -467,20 +476,34 @@ func (s *DataSource) Delete(ctx context.Context, name string) error {
 		UUID: vm.BlockDevices[0].UUID,
 	}
 
+	if err := s.DeleteBlockDevice(ctx, Block); err != nil {
+		return err
+	}
+
+	logger.I.Warn("Deleted a server", zap.Any("name", name))
+	return nil
+
+}
+
+type DeleteBlockDeviceRequest struct {
+	UUID string `json:"uuid"`
+}
+
+func (s *DataSource) DeleteBlockDevice(ctx context.Context, block DeleteBlockDeviceRequest) error {
 	requestBodyDev := struct {
 		DryRun bool        `json:"dry_run"`
 		Device interface{} `json:"block_device"`
 	}{
 		DryRun: false,
-		Device: Block,
+		Device: block,
 	}
 
-	jsonBody, err = json.Marshal(requestBodyDev)
+	jsonBody, err := json.Marshal(requestBodyDev)
 	if err != nil {
 		return err
 	}
 
-	resp, err = s.InterrogateAPI(ctx, releaseStorage, jsonBody)
+	resp, err := s.InterrogateAPI(ctx, releaseStorage, jsonBody)
 	if err != nil {
 		return err
 	}
@@ -496,11 +519,15 @@ func (s *DataSource) Delete(ctx context.Context, name string) error {
 		return fmt.Errorf("shadow API returned non-ok code: %d", resp.StatusCode)
 	}
 
-	logger.I.Warn("Deleted a server", zap.Any("name", name))
 	return nil
 }
 
-func (s *DataSource) ExecutePostcript(ctx context.Context, instance VM, userData []byte) error {
+func (s *DataSource) ExecutePostcript(
+	ctx context.Context,
+	host *config.Host,
+	instance VM,
+	userData []byte,
+) error {
 	// Parse the private key
 	pk, err := base64.StdEncoding.DecodeString(s.sshKey)
 	if err != nil {
@@ -526,6 +553,15 @@ func (s *DataSource) ExecutePostcript(ctx context.Context, instance VM, userData
 	addr := fmt.Sprintf("%s:%d", instance.VMPublicIPv4, instance.VMPublicSSHPort)
 
 	out, err := try.Do(func() ([]byte, error) {
+		// Healthcheck VM
+		health, err := s.FindVM(ctx, host.Name)
+		if err != nil {
+			return nil, err
+		}
+		// Is Terminated ?
+		if health.Status == 3 {
+			logger.I.Warn("VM seems terminated", zap.Error(err))
+		}
 		c, err := d.DialContext(ctx, "tcp", addr)
 		if err != nil {
 			return nil, err
