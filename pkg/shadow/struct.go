@@ -30,30 +30,39 @@ type BlockDevice struct {
 
 // VM is the VM field from the /vm/list endpoint
 type VM struct {
-	AffectedOn       string        `json:"affected_on"`
-	BlockDevices     []BlockDevice `json:"block_devices"`
-	DatacenterLabel  interface{}   `json:"datacenter_label"`
-	ID               int           `json:"id"`
-	Image            string        `json:"image"`
-	InsertedOn       string        `json:"inserted_on"`
-	KillRequestedOn  interface{}   `json:"kill_requested_on"`
-	LaunchBashScript string        `json:"launch_bash_script"`
-	MaxUptime        int           `json:"max_uptime"`
-	RequestTimeout   int           `json:"request_timeout"`
-	StartedOn        interface{}   `json:"started_on"`
-	Status           int           `json:"status"`
-	StatusStr        string        `json:"status_str"`
-	Uptime           int           `json:"uptime"`
-	UUID             string        `json:"uuid"`
-	VMCore           int           `json:"vm_core"`
-	VMCost           int           `json:"vm_cost"`
-	VMGPU            int           `json:"vm_gpu"`
-	VMPublicIPv4     string        `json:"vm_public_ipv4"`
-	VMPublicSSHPort  int           `json:"vm_public_sshport"`
-	VMRAM            int           `json:"vm_ram"`
-	VMSKU            string        `json:"vm_sku"`
-	VNC              bool          `json:"vnc"`
+	Image            string           `json:"image"`
+	UUID             string           `json:"uuid"`
+	Uptime           int64            `json:"uptime"`
+	VMRAM            int64            `json:"vm_ram"`
+	VMCore           int64            `json:"vm_core"`
+	VMGPU            int64            `json:"vm_gpu"`
+	VMCost           int64            `json:"vm_cost"`
+	VNC              bool             `json:"vnc"`
+	Interruptible    bool             `json:"interruptible"`
+	VNCPassword      *string          `json:"vnc_password"`
+	Status           int64            `json:"status"`
+	StatusStr        StatusStr        `json:"status_str"`
+	InsertedOn       string           `json:"inserted_on"`
+	AffectedOn       *string          `json:"affected_on"`
+	MaxUptime        int64            `json:"max_uptime"`
+	RequestTimeout   int64            `json:"request_timeout"`
+	StartedOn        *string          `json:"started_on"`
+	KillRequestedOn  *string          `json:"kill_requested_on"`
+	LaunchBashScript string           `json:"launch_bash_script"`
+	VMSku            VMSku            `json:"vm_sku"`
+	VMPublicIPv4     *VMPublicIPv4    `json:"vm_public_ipv4"`
+	VMPublicSSHPort  *int64           `json:"vm_public_sshport"`
+	DatacenterLabel  *DatacenterLabel `json:"datacenter_label"`
+	BlockDevices     []BlockDevice    `json:"block_devices"`
 }
+
+type DatacenterLabel string
+
+type StatusStr string
+
+type VMSku string
+
+type VMPublicIPv4 string
 
 // VMListResponse is the response from the /vm/list endpoint
 type VMListResponse struct {

@@ -10,12 +10,14 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 	"time"
 
 	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/squarefactory/cloud-burster/pkg/middlewares"
+	"github.com/squarefactory/cloud-burster/utils"
 	"github.com/squarefactory/cloud-burster/utils/try"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
@@ -175,7 +177,9 @@ func (s *DataSource) Create(
 			return VM{}, err
 		}
 
-		if response.VMs[0].VMPublicIPv4 == "" && response.VMs[0].VMPublicSSHPort == 0 {
+		if response.VMs[0].VMPublicIPv4 == nil || response.VMs[0].VMPublicSSHPort == nil ||
+			*response.VMs[0].VMPublicIPv4 == "" ||
+			*response.VMs[0].VMPublicSSHPort == 0 {
 			return VM{}, errors.New("instance has not been assigned an ip yet")
 		}
 
@@ -189,8 +193,8 @@ func (s *DataSource) Create(
 
 	logger.I.Info(
 		"instance has been assigned an ip, generating config",
-		zap.String("ip", VM.VMPublicIPv4),
-		zap.Int("port", VM.VMPublicSSHPort),
+		zap.Any("ip", VM.VMPublicIPv4),
+		zap.Any("port", VM.VMPublicSSHPort),
 	)
 
 	// Generate config
@@ -281,7 +285,8 @@ func (s *DataSource) CreateVM(
 		GPU           int         `json:"gpu"`
 		Image         string      `json:"image"`
 		BlockDevice   interface{} `json:"block_devices"`
-		Interruptible bool        `json:"interruptible"`
+		Interruptible *bool       `json:"interruptible,omitempty"`
+		VNC           *bool       `json:"vnc,omitempty"`
 	}
 
 	type RequestBody struct {
@@ -299,21 +304,18 @@ func (s *DataSource) CreateVM(
 	if err != nil {
 		return "", fmt.Errorf("url failed to parse: %w", err)
 	}
-	q := url.Query()
-	q.Add("hostname", host.Name)
-	url.RawQuery = q.Encode()
-	fmt.Println(url)
+	url.Path = fmt.Sprintf("%s/%s/", path.Base(url.Path), host.Name)
 
 	// TODO: do not hardcode resources
 	requestBody := RequestBody{
 		DryRun: false,
 		VM: RequestBodyVM{
-			SKU:           host.FlavorName,
-			RAM:           128,
-			GPU:           1,
-			Image:         url.String(),
-			BlockDevice:   []BlockDevice{Device},
-			Interruptible: true,
+			SKU:         host.FlavorName,
+			RAM:         112,
+			GPU:         1,
+			Image:       url.String(),
+			BlockDevice: []BlockDevice{Device},
+			VNC:         utils.Ptr(true),
 		},
 	}
 
@@ -409,7 +411,7 @@ func (s *DataSource) FindVM(ctx context.Context, name string) (VM, error) {
 			logger.I.Error("failed to parse url", zap.Error(err))
 			continue
 		}
-		if url.Query().Get("hostname") == name && vInsertTime.After(insertTime) {
+		if strings.Contains(url.Path, name) && vInsertTime.After(insertTime) {
 			vm = v
 			insertTime = vInsertTime
 		}
@@ -550,7 +552,7 @@ func (s *DataSource) ExecutePostcript(
 
 	// Connect to the SSH server
 	d := net.Dialer{Timeout: config.Timeout}
-	addr := fmt.Sprintf("%s:%d", instance.VMPublicIPv4, instance.VMPublicSSHPort)
+	addr := fmt.Sprintf("%s:%d", *instance.VMPublicIPv4, *instance.VMPublicSSHPort)
 
 	out, err := try.Do(func() ([]byte, error) {
 		// Healthcheck VM
@@ -558,9 +560,8 @@ func (s *DataSource) ExecutePostcript(
 		if err != nil {
 			return nil, err
 		}
-		// Is Terminated ?
 		if health.Status == 3 {
-			logger.I.Warn("VM seems terminated", zap.Error(err))
+			return nil, errors.New("VM is terminated")
 		}
 		c, err := d.DialContext(ctx, "tcp", addr)
 		if err != nil {
