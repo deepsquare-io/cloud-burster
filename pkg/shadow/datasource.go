@@ -184,7 +184,7 @@ func (s *DataSource) Create(
 		}
 
 		return response.VMs[0], nil
-	}, 10, 10*time.Second)
+	}, 60, 10*time.Second)
 
 	if err != nil {
 		logger.I.Error("failed to find public IP", zap.Error(err))
