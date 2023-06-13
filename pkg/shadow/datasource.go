@@ -311,8 +311,8 @@ func (s *DataSource) CreateVM(
 		DryRun: false,
 		VM: RequestBodyVM{
 			SKU:         host.FlavorName,
-			RAM:         112,
-			GPU:         1,
+			RAM:         host.RAM,
+			GPU:         host.GPU,
 			Image:       url.String(),
 			BlockDevice: []BlockDevice{Device},
 			VNC:         utils.Ptr(true),
