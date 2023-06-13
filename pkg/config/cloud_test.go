@@ -70,9 +70,6 @@ var cleanExoscaleCloud = config.Cloud{
 }
 
 var cleanShadowCloud = config.Cloud{
-	AuthorizedKeys: []string{
-		"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDUnXMBGq6bV6H+c7P5QjDn1soeB6vkodi6OswcZsMwH nguye@PC-DARKNESS4",
-	},
 	PostScripts: config.PostScriptsOpts{
 		Git: config.GitOpts{
 			Key: "key",
@@ -84,6 +81,8 @@ var cleanShadowCloud = config.Cloud{
 		{
 			Name:       "host",
 			DiskSize:   50,
+			RAM:        112,
+			GPU:        1,
 			FlavorName: "VM-A4500-7543P-R2",
 			ImageName:  "https://example.exo.io/ubuntu/",
 		},

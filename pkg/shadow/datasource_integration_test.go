@@ -17,6 +17,8 @@ var (
 	host = config.Host{
 		Name:       "cn1.ca-bhs-5.deepsquare.run",
 		DiskSize:   64,
+		RAM:        112,
+		GPU:        1,
 		FlavorName: "VM-A4500-7543P-R2",
 		ImageName:  "https://sos-ch-dk-2.exo.io/squareos-shadow/",
 	}
