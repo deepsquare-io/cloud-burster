@@ -9,7 +9,7 @@ require (
 	github.com/gophercloud/gophercloud v1.4.0
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v2 v2.25.6
-	go.uber.org/zap v1.24.0
+	go.uber.org/zap v1.25.0
 	golang.org/x/crypto v0.10.0
 	gopkg.in/yaml.v3 v3.0.1
 )
