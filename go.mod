@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/exoscale/egoscale v1.19.0
 	github.com/go-playground/validator/v10 v10.14.1
-	github.com/gophercloud/gophercloud v1.4.0
+	github.com/gophercloud/gophercloud v1.6.0
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v2 v2.25.6
 	go.uber.org/zap v1.24.0
