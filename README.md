@@ -21,7 +21,7 @@ apiVersion: 'cloud-burster.squarefactory.io/v1alpha1'
 ## For example, if you use the name "cn-s-1" and the suffixSearch "example.com",
 ## the cloud-burster will search "cn-s-1.example.com", then "cn-s-1".
 suffixSearch:
-  - ".example.com"
+  - '.example.com'
 clouds:
   - type: openstack
     network:
@@ -96,7 +96,6 @@ clouds:
         url: git@github.com:SquareFactory/compute-configs.git
         ref: main
     exoscale:
-      computeEndpoint: https://api.exoscale.com/v1
       apiKey: key
       apiSecret: secret
       zone: zone

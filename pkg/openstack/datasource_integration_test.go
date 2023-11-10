@@ -23,7 +23,7 @@ var (
 	}
 
 	cloud = config.Cloud{
-		Network: config.Network{
+		Network: &config.Network{
 			Name:       "cf-net",
 			SubnetCIDR: "172.28.0.0/20",
 			DNS:        "1.1.1.1",

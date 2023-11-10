@@ -88,7 +88,6 @@ clouds:
         url: git@github.com:SquareFactory/compute-configs.git
         ref: main
     exoscale:
-      computeEndpoint: https://api.exoscale.com/v1
       apiKey: key
       apiSecret: secret
       zone: zone

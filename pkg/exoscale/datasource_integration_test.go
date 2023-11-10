@@ -4,13 +4,16 @@ package exoscale_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
+	"github.com/joho/godotenv"
 	"github.com/squarefactory/cloud-burster/logger"
 	"github.com/squarefactory/cloud-burster/pkg/config"
 	"github.com/squarefactory/cloud-burster/pkg/exoscale"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/zap"
 )
 
 var (
@@ -23,7 +26,7 @@ var (
 	}
 
 	cloud = config.Cloud{
-		Network: config.Network{
+		Network: &config.Network{
 			Name:       "exo-connected-gcp",
 			SubnetCIDR: "172.24.0.0/20",
 			DNS:        "1.1.1.1",
@@ -38,7 +41,6 @@ var (
 
 type DataSourceTestSuite struct {
 	suite.Suite
-	url       string
 	apiKey    string
 	apiSecret string
 	zone      string
@@ -52,6 +54,7 @@ func (suite *DataSourceTestSuite) TestFindImageID() {
 	// Assert
 	suite.NoError(err)
 	suite.NotEmpty(res)
+	fmt.Println(res)
 }
 
 func (suite *DataSourceTestSuite) TestFindFlavorID() {
@@ -61,15 +64,17 @@ func (suite *DataSourceTestSuite) TestFindFlavorID() {
 	// Assert
 	suite.NoError(err)
 	suite.NotEmpty(res)
+	fmt.Println(res)
 }
 
 func (suite *DataSourceTestSuite) TestFindNetworkID() {
 	// Act
-	networkID, err := suite.impl.FindNetworkID(context.Background(), cloud.Network.Name)
+	res, err := suite.impl.FindNetworkID(context.Background(), cloud.Network.Name)
 
 	// Assert
 	suite.NoError(err)
-	suite.NotEmpty(networkID)
+	suite.NotEmpty(res)
+	fmt.Println(res)
 }
 
 func (suite *DataSourceTestSuite) TestCreate() {
@@ -89,26 +94,20 @@ func (suite *DataSourceTestSuite) TestCreate() {
 
 func (suite *DataSourceTestSuite) BeforeTest(suiteName, testName string) {
 	suite.impl = exoscale.New(
-		suite.url,
 		suite.apiKey,
 		suite.apiSecret,
 		suite.zone,
 	)
 }
 func TestDataSourceTestSuite(t *testing.T) {
-	url := os.Getenv("EXO_URL")
-	key := os.Getenv("EXO_API_KEY")
-	secret := os.Getenv("EXO_API_SECRET")
-	zone := os.Getenv("EXO_ZONE")
-	// Skip test if not defined
-	if url == "" || key == "" || secret == "" {
-		logger.I.Warn("mandatory variables are not set!")
+	if err := godotenv.Load(".env.test"); err != nil {
+		// Skip test if not defined
+		logger.I.Error("Error loading .env.test file", zap.Error(err))
 	} else {
 		suite.Run(t, &DataSourceTestSuite{
-			url:       url,
-			apiKey:    key,
-			apiSecret: secret,
-			zone:      zone,
+			apiKey:    os.Getenv("EXO_API_KEY"),
+			apiSecret: os.Getenv("EXO_API_SECRET"),
+			zone:      os.Getenv("EXO_ZONE"),
 		})
 	}
 }

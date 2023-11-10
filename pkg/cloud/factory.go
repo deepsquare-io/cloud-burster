@@ -38,7 +38,6 @@ func New(conf *config.Cloud) (DataSource, error) {
 		), nil
 	case "exoscale":
 		return exoscale.New(
-			conf.Exoscale.ComputeEndpoint,
 			conf.Exoscale.APIKey,
 			conf.Exoscale.APISecret,
 			conf.Exoscale.Zone,

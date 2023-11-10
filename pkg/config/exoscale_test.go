@@ -10,10 +10,9 @@ import (
 )
 
 var cleanExoscale = config.Exoscale{
-	ComputeEndpoint: "https://api.exoscale.com/v1",
-	APIKey:          "key",
-	APISecret:       "secret",
-	Zone:            "zone",
+	APIKey:    "key",
+	APISecret: "secret",
+	Zone:      "zone",
 }
 
 type ExoscaleTestSuite struct {
@@ -34,20 +33,6 @@ func (suite *ExoscaleTestSuite) TestValidate() {
 		{
 			input: &config.Exoscale{},
 			title: "Positive test: Empty fields",
-		},
-		{
-			isError: true,
-			errorContains: []string{
-				"url",
-				"ComputeEndpoint",
-			},
-			input: &config.Exoscale{
-				ComputeEndpoint: "aaa",
-				APIKey:          cleanExoscale.APIKey,
-				APISecret:       cleanExoscale.APISecret,
-				Zone:            cleanExoscale.Zone,
-			},
-			title: "Valid URL",
 		},
 	}
 

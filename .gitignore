@@ -35,3 +35,6 @@ coverage*
 build/
 *.local
 bin/
+
+.env.test
+.env.local
